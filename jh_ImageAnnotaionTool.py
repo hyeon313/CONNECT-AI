@@ -59,7 +59,11 @@ class MyWidget(QWidget):
     #     self.setLayout(vbox)
 
 class MyApp(QMainWindow):
-
+    x1 = 0
+    y1 = 0
+    x2 = 0
+    y2 = 0
+     
     def __init__(self):
         super().__init__()
         self.window_level = 0
@@ -166,6 +170,26 @@ class MyApp(QMainWindow):
         elif e.key() == Qt.Key_S:
             self.window_width = self.window_width - 10
             return self.window_width
+          
+     def mousePressEvent(self, event):
+        # # 왼쪽 오른쪽 동시에 누를 때  
+        if event.buttons () == QtCore.Qt.LeftButton | QtCore.Qt.RightButton:
+            print("Click the left and right mouse button")
+            print("Mouse 클릭한 좌표: x={0},y={1}".format(event.x(), event.y()))
+            x1 = event.x()
+            y1 = event.y()
+            print('x1 = ', x1)
+            print('y1 = ', y1)
+
+    def mouseReleaseEvent(self, event):
+     # ***마우스를 뗄 때 작동하지 않음!***
+        if event.buttons () == QtCore.Qt.LeftButton | QtCore.Qt.RightButton:
+            print("mouse release")
+            print("Mouse 뗄 때 좌표: x={0},y={1}".format(event.x(), event.y()))
+    # def mouseReleaseEvent(self, event):
+    #     if event.buttons() == QtCore.Qt.LeftButton:
+    #         print("RELEASE left mouse button")     
+     
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
