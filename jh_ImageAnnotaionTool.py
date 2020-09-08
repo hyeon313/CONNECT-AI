@@ -152,6 +152,7 @@ class MyApp(QMainWindow):
     # def mousePressEvent(self, e):
     #     self.c.closeApp.emit()
 # https://wikidocs.net/21942         
+# https://www.programmersought.com/article/36971069089/
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_A:
             self.window_level = self.window_level - 10
