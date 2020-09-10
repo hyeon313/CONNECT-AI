@@ -1,3 +1,5 @@
+# 마우스를 왼쪽 오른쪽 동시에 누르는 것을 toggle로 만듦
+# 움직인 만큼 기본 level, width를 더하여 level, width가 움직이게 만드는 코드
 import sys
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QWidget, QHBoxLayout,\
      QVBoxLayout, QAction, QFileDialog, QGraphicsView, QGraphicsScene)
@@ -9,6 +11,7 @@ import pydicom
 import numpy as np
 import SimpleITK as itk
 import qimage2ndarray
+import math
 
 class MyWidget(QWidget): 
     def __init__(self): 
@@ -52,43 +55,47 @@ class MyWidget(QWidget):
 
 
 # x widrh, y level 예정
-    def eventFilter(self, obj, event):
-        if obj is self.view_1.viewport() or self.view_2.viewport():
-            if event.type() == QEvent.MouseButtonPress:
-                if event.buttons () == QtCore.Qt.LeftButton | QtCore.Qt.RightButton:
-                    global x1
-                    global y1
+#    def eventFilter(self, obj, event):
+#        if obj is self.view_1.viewport() or self.view_2.viewport():
+#            if event.type() == QEvent.MouseButtonPress:
+#                if event.buttons () == QtCore.Qt.LeftButton | QtCore.Qt.RightButton:
+#                    global x1
+#                    global y1
                     
-                    print("eventFilter")
-                    print("Mouse 클릭한 좌표: x1={0},y1={1}".format(event.globalX(), event.globalY()))
-                    x1 = event.globalX()
-                    y1 = event.globalY()
-                    print('x1 = ', x1)
-                    print('y1 = ', y1)
-            elif event.type() == QEvent.MouseButtonRelease:
-                print('BUTTON RELEASE')
-                print("Mouse 뗀 좌표: x2={0},y2={1}".format(event.globalX(), event.globalY()))
-                x2 = event.globalX()
-                y2 = event.globalY()
-                print('x2 = ', x2)
-                print('y2 = ', y2)
-                x = x2 - x1
-                y = y2 - y1
-                print("이동한 거리: x={0}, y={1}".format(x,y))
+#                     print("eventFilter")
+#                     print("Mouse 클릭한 좌표: x1={0},y1={1}".format(event.globalX(), event.globalY()))
+#                     x1 = event.globalX()
+#                     y1 = event.globalY()
+#                     print('x1 = ', x1)
+#                     print('y1 = ', y1)
+#             elif event.type() == QEvent.MouseButtonRelease:
+#                 print('BUTTON RELEASE')
+#                 print("Mouse 뗀 좌표: x2={0},y2={1}".format(event.globalX(), event.globalY()))
+#                 x2 = event.globalX()
+#                 y2 = event.globalY()
+#                 print('x2 = ', x2)
+#                 print('y2 = ', y2)
+#                 x = x2 - x1
+#                 y = y2 - y1
+#                 print("이동한 거리: x={0}, y={1}".format(x,y))
 
-        return QWidget.eventFilter(self, obj, event)
+#         return QWidget.eventFilter(self, obj, event)
     
 
 class MyApp(QMainWindow):
-    x1 = 0
-    y1 = 0
-    x2 = 0
-    y2 = 0
-     
+    
     def __init__(self):
         super().__init__()
+     
+        #지현
+        self.LRpoint = [0, 0]
+        self.LRClicked = False #두 버튼 모두 눌림 여부 확인
         self.window_level = 0
         self.window_width = 0
+        self.deltaWL = 0
+        self.deltaWW = 0
+         
+     
         self.wg = MyWidget() 
         # wg = MyWidget2() # placeholder -- QWidget 상속하여 만든것으로 추후 교체하면 됨. 
         self.setCentralWidget(self.wg) # 반드시 필요함.
@@ -125,19 +132,6 @@ class MyApp(QMainWindow):
     def openImage(self):
         imagePath, _ = QFileDialog.getOpenFileName()
 
-        # ===========================================================
-        # original_img = QPixmap(imagePath)
-        # blending_img = QPixmap(imagePath)
-        
-        # self.wg.lbl_original_img.setPixmap(original_img)
-        # self.wg.lbl_blending_img.setPixmap(blending_img)
-
-        # self.wg.lbl_original_img.mouseMoveEvent = self.mouseMoveEvent
-        # self.wg.lbl_blending_img.mouseMoveEvent = self.mouseMoveEvent
-        # self.wg.lbl_original_img.setMouseTracking(True)
-        # self.wg.lbl_blending_img.setMouseTracking(True)
-        # ===========================================================
-
 
         # original_img = pydicom.dcmread(imagePath)
         # blending_img = pydicom.dcmread(imagePath)
@@ -168,50 +162,121 @@ class MyApp(QMainWindow):
         self.wg.view_2.mouseMoveEvent = self.mouseMoveEvent
         self.wg.view_1.setMouseTracking(True)
         self.wg.view_2.setMouseTracking(True)
-
-    def mouseMoveEvent(self, event):
+          
+     # 지현
+     def mouseMoveEvent(self, event):
         txt = "Mouse 위치 ; x={0},y={1}".format(event.x(), event.y()) 
         self.wg.lbl_pos.setText(txt)
         self.wg.lbl_pos.adjustSize()
-  
-    # def mousePressEvent(self, e):
-    #     self.c.closeApp.emit()
-# https://wikidocs.net/21942         
-# https://www.programmersought.com/article/36971069089/
-'''
-    def keyPressEvent(self, e):
-        if e.key() == Qt.Key_A:
-            self.window_level = self.window_level - 10
-            return self.window_level
-        elif e.key() == Qt.Key_D:
-            self.window_level = self.window_level + 10
-            return self.window_level
-        elif e.key() == Qt.Key_W:
-            self.window_width = self.window_width + 10
-            return self.window_width
-        elif e.key() == Qt.Key_S:
-            self.window_width = self.window_width - 10
-            return self.window_width
-          
-     def mousePressEvent(self, event):
-        # # 왼쪽 오른쪽 동시에 누를 때  
-        if event.buttons () == QtCore.Qt.LeftButton | QtCore.Qt.RightButton:
-            print("Click the left and right mouse button")
-            print("Mouse 클릭한 좌표: x={0},y={1}".format(event.x(), event.y()))
-            x1 = event.x()
-            y1 = event.y()
-            print('x1 = ', x1)
-            print('y1 = ', y1)
 
-    def mouseReleaseEvent(self, event):
-     # ***마우스를 뗄 때 작동하지 않음!***
+        if self.LRClicked:
+           # print("after click: ", event.globalX(), event.globalY())
+
+            mX = float(event.globalX())
+            mY = float(event.globalY())
+            
+            
+
+            #조건
+            rX = np.array(self.LRpoint[0]) #기준점
+            rY = np.array(self.LRpoint[1])
+
+           # print(type(mX), mY, type(rX), rY)
+
+            # self.window_level
+            # self.window_width
+
+            square = (rX - mX)*(rX - mX) + (rY - mY)*(rY - mY)
+            dist = math.sqrt(square)
+
+            temp_wl = 0
+            temp_ww = 0
+
+            if rX < mX: #오른쪽
+                
+                #temp_wl = self.window_level + dist
+                self.deltaWL  = dist
+                
+            else: #왼쪽부분
+                #temp_wl = self.window_level - dist
+                self.deltaWL  = -dist
+
+
+            if rY < mY: #아래부분
+                #temp_ww = self.window_width - dist
+                self.deltaWW = -dist
+
+            else: #윗부분
+                #temp_ww = self.window_width + dist
+                self.deltaWW = dist
+
+            #self.deltaWL, self.deltaWW 가지고 요 내부에서 반영
+            temp_wl = self.window_level + self.deltaWL
+            temp_ww = self.window_width + self.deltaWW
+
+            if temp_wl < 0:
+                temp_wl = 0
+            
+            if temp_ww < 0:
+                temp_ww = 0
+            
+            #self.EntireImage 이미지전체를 조절해줘야함.
+
+            print("move: ", temp_wl, temp_ww)
+          
+     # 지현  
+     def mousePressEvent(self, event):
+        
+        if event.buttons () == QtCore.Qt.LeftButton:
+            print("L down")
+        if event.buttons () == QtCore.Qt.RightButton:
+            print("R down")
+
+
         if event.buttons () == QtCore.Qt.LeftButton | QtCore.Qt.RightButton:
-            print("mouse release")
-            print("Mouse 뗄 때 좌표: x={0},y={1}".format(event.x(), event.y()))
-    # def mouseReleaseEvent(self, event):
-    #     if event.buttons() == QtCore.Qt.LeftButton:
-    #         print("RELEASE left mouse button")     
-'''     
+
+            if self.LRClicked == False:
+                self.LRClicked = True
+            
+            else:
+                self.LRClicked = False
+                self.window_level = self.window_level + self.deltaWL
+                self.window_width = self.window_width + self.deltaWW
+
+                if self.window_level < 0:
+                    self.window_level = 0
+                
+                if self.window_width < 0:
+                    self.window_width = 0
+                    
+
+                print("최종반영 ", self.window_level, self.window_width)
+
+
+            print("mousePressEvent")
+            print("Mouse 클릭한 좌표: x={0},y={1}".format(event.x(), event.y()))
+            x = event.globalX()
+            y = event.globalY()
+            self.LRpoint = [x, y] #기준점 셋업
+            
+            print('x = ', x)
+            print('y = ', y)
+
+     # 지현               
+    def mouseReleaseEvent(self, event): 
+        # 인식이 안됨 이유 찾기
+        # e ; QMouseEvent 
+        # if event.buttons () == QtCore.Qt.LeftButton | QtCore.Qt.RightButton:
+        #     print('BUTTON RELEASE') 
+            # self.mousePressEvent(e.buttons())
+        print('BUTTON RELEASE')
+        # self.mouseButtonKind(e.buttons())
+        print("Click the left and right mouse button")
+        print("Mouse 뗀 좌표: x={0},y={1}".format(event.x(), event.y()))
+        x1 = event.x()
+        y1 = event.y()
+        print('x1 = ', x1)
+        print('y1 = ', y1)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
