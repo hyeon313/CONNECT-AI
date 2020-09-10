@@ -34,29 +34,50 @@ class MyWidget(QWidget):
         self.vbox.addWidget(self.lbl_pos)
         
         self.setLayout(self.vbox)
-    #     self.initUI()
+        self.view_1.viewport().installEventFilter(self)
+        self.view_2.viewport().installEventFilter(self)
 
-    # def initUI(self):
-    #     lbl_original_img = QGraphicsScene()
-    #     lbl_blending_img = QGraphicsScene()
-    #     view_1 = QGraphicsView(lbl_original_img) 
-    #     view_2 = QGraphicsView(lbl_blending_img) 
+    # def eventFilter(self, obj, event):
+    #     if obj is self.view_1.viewport():
+    #         if event.type() == QEvent.MouseButtonPress:
+    #             print('mouse press event = ', event.pos())
+    #         elif event.type() == QEvent.MouseButtonRelease:
+    #             print('mouse release event = ', event.pos())
+    #     elif obj is self.view_2.viewport():
+    #         if event.type() == QEvent.MouseButtonPress:
+    #             print('mouse press event = ', event.pos())
+    #         elif event.type() == QEvent.MouseButtonRelease:
+    #             print('mouse release event = ', event.pos())
+    #     return QWidget.eventFilter(self, obj, event)
 
-    #     view_1.setFixedSize(512, 512)
-    #     view_2.setFixedSize(512, 512)
-        
-    #     lbl_pos = QLabel()
-    #     lbl_pos.setAlignment(Qt.AlignCenter)
-        
-    #     hbox = QHBoxLayout()
-    #     hbox.addWidget(view_1)
-    #     hbox.addWidget(view_2)
-        
-    #     vbox = QVBoxLayout()
-    #     vbox.addLayout(hbox)
-    #     vbox.addWidget(lbl_pos)
-        
-    #     self.setLayout(vbox)
+
+# x widrh, y level 예정
+    def eventFilter(self, obj, event):
+        if obj is self.view_1.viewport() or self.view_2.viewport():
+            if event.type() == QEvent.MouseButtonPress:
+                if event.buttons () == QtCore.Qt.LeftButton | QtCore.Qt.RightButton:
+                    global x1
+                    global y1
+                    
+                    print("eventFilter")
+                    print("Mouse 클릭한 좌표: x1={0},y1={1}".format(event.globalX(), event.globalY()))
+                    x1 = event.globalX()
+                    y1 = event.globalY()
+                    print('x1 = ', x1)
+                    print('y1 = ', y1)
+            elif event.type() == QEvent.MouseButtonRelease:
+                print('BUTTON RELEASE')
+                print("Mouse 뗀 좌표: x2={0},y2={1}".format(event.globalX(), event.globalY()))
+                x2 = event.globalX()
+                y2 = event.globalY()
+                print('x2 = ', x2)
+                print('y2 = ', y2)
+                x = x2 - x1
+                y = y2 - y1
+                print("이동한 거리: x={0}, y={1}".format(x,y))
+
+        return QWidget.eventFilter(self, obj, event)
+    
 
 class MyApp(QMainWindow):
     x1 = 0
@@ -157,6 +178,7 @@ class MyApp(QMainWindow):
     #     self.c.closeApp.emit()
 # https://wikidocs.net/21942         
 # https://www.programmersought.com/article/36971069089/
+'''
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_A:
             self.window_level = self.window_level - 10
@@ -189,7 +211,7 @@ class MyApp(QMainWindow):
     # def mouseReleaseEvent(self, event):
     #     if event.buttons() == QtCore.Qt.LeftButton:
     #         print("RELEASE left mouse button")     
-     
+'''     
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
