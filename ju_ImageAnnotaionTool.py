@@ -82,9 +82,16 @@ class MyApp(QMainWindow):
         # openAction.triggered.connect(self.read_dicom)
         self.toolbar = self.addToolBar('Open')
         self.toolbar.addAction(openAction)
+        
+        ###########
+        Dbtn = QPushButton('&ImgNum', self)
+        Dbtn.move(900, 565)
+        Dbtn.setCheckable(True)
+        Dbtn.toggle()
+        Dbtn.clicked.connect(self.showDialog)
 
         btn1 = QPushButton('&previous', self)
-        btn1.move(150, 565)
+        btn1.move(700, 565)
         btn1.setCheckable(True)
         btn1.toggle()
 
@@ -103,6 +110,31 @@ class MyApp(QMainWindow):
 #         self.move(300, 300)
         self.show()
 
+    def showDialog(self):
+        num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num')
+        #self.label.setText("text: %s" % (text))
+        self.cur_idx + 1 = num
+        # if ok:
+        #     self.label.setText(str(num))
+        if self.cur_idx > self.NofI-1:
+            self.cur_idx = self.NofI-1
+        
+        self.cur_image = self.EntireImage[self.cur_idx]
+        image = self.AdjustPixelRange(self.cur_image, self.window_level, self.window_width) #지현
+        
+        image = qimage2ndarray.array2qimage(image)
+        image = QPixmap.fromImage(QImage(image))
+
+        self.wg.lbl_original_img.addPixmap(image)
+        self.wg.lbl_blending_img.addPixmap(image)
+        self.wg.view_1.setScene(self.wg.lbl_original_img)
+        self.wg.view_2.setScene(self.wg.lbl_blending_img)
+        self.wg.view_1.show()
+        self.wg.view_2.show()
+
+    def onChanged(self,text):
+        self.lbl.setText(text)
+        self.lbl.adjustSize()
     #종엄
     def btn1_clicked(self):
         #QMessageBox.about(self, "메세지", "이전")
@@ -125,8 +157,11 @@ class MyApp(QMainWindow):
 
         #왼쪽 프레임 이미지 업데이트 필요
         self.wg.lbl_original_img.addPixmap(image)
+        self.wg.lbl_blending_img.addPixmap(image)
         self.wg.view_1.setScene(self.wg.lbl_original_img)
+        self.wg.view_2.setScene(self.wg.lbl_blending_img)
         self.wg.view_1.show()
+        self.wg.view_2.show()
 
 
 
@@ -155,8 +190,11 @@ class MyApp(QMainWindow):
 
         #왼쪽 프레임 이미지 업데이트 필요
         self.wg.lbl_original_img.addPixmap(image)
+        self.wg.lbl_blending_img.addPixmap(image)
         self.wg.view_1.setScene(self.wg.lbl_original_img)
+        self.wg.view_2.setScene(self.wg.lbl_blending_img)
         self.wg.view_1.show()
+        self.wg.view_2.show()
 
 
 
