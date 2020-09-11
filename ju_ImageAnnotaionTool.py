@@ -113,7 +113,7 @@ class MyApp(QMainWindow):
     def showDialog(self):
         num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num')
         #self.label.setText("text: %s" % (text))
-        self.cur_idx + 1 = num
+        self.cur_idx = num - 1
         # if ok:
         #     self.label.setText(str(num))
         if self.cur_idx > self.NofI-1:
