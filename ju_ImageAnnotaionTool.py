@@ -5,11 +5,11 @@ from PyQt5.QtGui import QPixmap, QIcon, QImage
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 # import Utility
-import pydicom
-
+import pydicom # DICOM파일(국제 표준에 따라 생성된 메디컬 이미지 파일)을 
+               # 가져오기 위해 python packages 중 하나인 pydicom을 import
 import numpy as np
-import SimpleITK as itk #dicom 관련
-import qimage2ndarray
+import SimpleITK as itk # SimpleITK로부터 itk(이미지 분할 및 이미지 등록 플랫폼)을 import
+import qimage2ndarray # Qimages와 numpy.ndarrays를 빠르게 변환하기위해 qimage2ndarray를 import
 
 class MyWidget(QWidget): 
     def __init__(self): 
@@ -76,57 +76,68 @@ class MyApp(QMainWindow):
         
         
     def initUI(self):
-        
+        # file open Action===> 툴바로부터 파일을 여는 액션을 생성
         openAction = QAction(QIcon('exit.png'), 'Open', self)
         openAction.triggered.connect(self.openImage)
-        # openAction.triggered.connect(self.read_dicom)
         self.toolbar = self.addToolBar('Open')
         self.toolbar.addAction(openAction)
         
-        ###########
+        # dialog Button===> 원하는 이미지 번호를 받을 dialog 생성
         Dbtn = QPushButton('&ImgNum', self)
         Dbtn.move(900, 565)
         Dbtn.setCheckable(True)
         Dbtn.toggle()
         Dbtn.clicked.connect(self.showDialog)
-
+        # previous button===> 이전 이미지로 넘어가기위한 Button 생성       
         btn1 = QPushButton('&previous', self)
         btn1.move(700, 565)
         btn1.setCheckable(True)
         btn1.toggle()
-
+        # next button===> 다음 이미지로 넘어가기위한 Button 생성
         btn2 = QPushButton('&next', self)
         btn2.move(800, 565)
-
+        btn1.setCheckable(True)
+        btn1.toggle()
+        # 단축키
         btn1.setShortcut('Ctrl+1')
         btn2.setShortcut('Ctrl+2')
-
+        #btn1과 btn2에 각각 ~_clicked 연결하여 이벤트 발생
         btn1.clicked.connect(self.btn1_clicked)
         btn2.clicked.connect(self.btn2_clicked)
         
         self.setWindowTitle('Test Image')
 
         self.setGeometry(300, 300, 1100, 600)
-#         self.move(300, 300)
+
         self.show()
 
+    #Dbtn이 버튼 클릭으로부터 호출 할 showDialog함수 선언
     def showDialog(self):
-        num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num')
+        num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num') #QInputDialg클래스에 getInt매소드를 이용하여 입력값을 튜플 형태로 num과ok에 넣기
         #self.label.setText("text: %s" % (text))
-        self.cur_idx = num - 1
+        self.cur_idx = num - 1 # 입력받은 num값을 cur_idx(인덱스)에 넣는다(0부터 시작해서 입력값에 1빼기)
         # if ok:
         #     self.label.setText(str(num))
+        print("show image",self.cur_idx + 1)
         if self.cur_idx > self.NofI-1:
-            self.cur_idx = self.NofI-1
-        
-        self.cur_image = self.EntireImage[self.cur_idx]
-        image = self.AdjustPixelRange(self.cur_image, self.window_level, self.window_width) #지현
-        
-        image = qimage2ndarray.array2qimage(image)
-        image = QPixmap.fromImage(QImage(image))
+            self.cur_idx = self.NofI-1 # num-1값이 NofI(이미지 전체 개수)를 넘어가면 마지막값[223]을 계속 가지게 만든다
+        elif self.cur_idx < 0:
+            self.cur_idx = self.NofI-224
+###########질문########
+        # if self.cur_idx == -1: #self.cur_idx가 -1,즉 num이 0을 받아온 상황에서의 조건 생성 중....
+        #     QMessageBox.about(self, "메세지", "no")
 
-        self.wg.lbl_original_img.addPixmap(image)
-        self.wg.lbl_blending_img.addPixmap(image)
+        
+        self.cur_image = self.EntireImage[self.cur_idx] #cur_idx값을 EntireImage를 통해 cur_image에 넣기
+        
+        image = self.AdjustPixelRange(self.cur_image, self.window_level, self.window_width) #지현
+        # cur_image와 window_level, window_width를 AdgustPixelRange함수에 통과시켜 image에 넣기
+        image = qimage2ndarray.array2qimage(image) # 통과시킨 imaeg를 Qimage로 전환
+        image = QPixmap.fromImage(QImage(image)) #Qimage 형태인 image를 받아 fromImage매소드를 써서 QPixmap(이미지를 보여줄때 쓰는 객체, 포맷들을 지원)
+                                #QImage=Qpaint를 사용하거나 이미지 필셀조작
+                                #QPixmap= 기존 이미지를 반복해서 그릴 때
+        self.wg.lbl_original_img.addPixmap(image) #original_img = 왼쪽 화면
+        self.wg.lbl_blending_img.addPixmap(image) #blending_img = 오른쪽 화면
         self.wg.view_1.setScene(self.wg.lbl_original_img)
         self.wg.view_2.setScene(self.wg.lbl_blending_img)
         self.wg.view_1.show()
@@ -135,17 +146,17 @@ class MyApp(QMainWindow):
     def onChanged(self,text):
         self.lbl.setText(text)
         self.lbl.adjustSize()
+
     #종엄
+    #btn1이 버튼 클릭으로부터 호출 할 btn1_clicked함수 선언
     def btn1_clicked(self):
         #QMessageBox.about(self, "메세지", "이전")
-        self.cur_idx = self.cur_idx - 1
+        self.cur_idx = self.cur_idx - 1 # 현재 인덱스에 1을 빼서 cur_idx에 넣기
                 
-        if self.cur_idx < 0:
-            self.cur_idx = 0
-        if self.cur_idx > self.NofI-1:
-            self.cur_idx = self.NofI-1
+        if self.cur_idx < 0: 
+            self.cur_idx = 0 #0보다 작으면 0으로 남기
             
-        print("left", self.cur_idx)
+        print("left and image", self.cur_idx +1)
 
 
         self.cur_image = self.EntireImage[self.cur_idx]
@@ -163,22 +174,17 @@ class MyApp(QMainWindow):
         self.wg.view_1.show()
         self.wg.view_2.show()
 
-
-
-
-
     #종엄
+    #btn2이 버튼 클릭으로부터 호출 할 btn2_clicked함수 선언
     def btn2_clicked(self):
         #QMessageBox.about(self, "메세지", "다음")
 
-        self.cur_idx = self.cur_idx + 1
+        self.cur_idx = self.cur_idx + 1 # 현재 인덱스에서 1을 더해서 cur_idx에 넣기
 
-        if self.cur_idx < 0:
-            self.cur_idx = 0
         if self.cur_idx > self.NofI-1:
-            self.cur_idx = self.NofI-1
+            self.cur_idx = self.NofI-1 #223보다 크면 223으로 남기
 
-        print("right", self.cur_idx)
+        print("right and image=", self.cur_idx +1)
 
 
         self.cur_image = self.EntireImage[self.cur_idx]
@@ -241,11 +247,12 @@ class MyApp(QMainWindow):
         print(type(images[0]), type(images[1]))
 
         ImgArray = itk.GetArrayFromImage(images)   
-        self.EntireImage = np.asarray(ImgArray, dtype=np.float32)
-        self.EntireImage = np.squeeze(self.EntireImage)
+        self.EntireImage = np.asarray(ImgArray, dtype=np.float32) #입력 데이터를 ndarray로 변환하나 이미 ndarray일 경우 새로 메모리에 ndarray가 생성 (x)
+        self.EntireImage = np.squeeze(self.EntireImage)# 차원 축소
+        print(type(self.EntireImage))
         # 넘파이 이미지 (224, 512, 512)로 전체 데이터 받음.
 
-        print(self.EntireImage.shape)
+        print(self.EntireImage.shape)# (224, 512, 512)
 
         self.NofI = self.EntireImage.shape[0]  #이미지 갯수
         self.Nx = self.EntireImage.shape[1] #x차원
@@ -253,38 +260,6 @@ class MyApp(QMainWindow):
 
         self.cur_image = self.EntireImage[self.cur_idx] #현재 이미지 셋팅
 
-
-        
-
-
-        # ===========================================================
-        # original_img = QPixmap(imagePath)
-        # blending_img = QPixmap(imagePath)
-        
-        # self.wg.lbl_original_img.setPixmap(original_img)
-        # self.wg.lbl_blending_img.setPixmap(blending_img)
-
-        # self.wg.lbl_original_img.mouseMoveEvent = self.mouseMoveEvent
-        # self.wg.lbl_blending_img.mouseMoveEvent = self.mouseMoveEvent
-        # self.wg.lbl_original_img.setMouseTracking(True)
-        # self.wg.lbl_blending_img.setMouseTracking(True)
-        # ===========================================================
-
-
-        # original_img = pydicom.dcmread(imagePath)
-        # blending_img = pydicom.dcmread(imagePath)
-
-        #한장씩 읽을때 쓰던 것
-        # ImgData = itk.ReadImage(imagePath)
-        # ImgArray = itk.GetArrayFromImage(ImgData)   
-        # image= np.asarray(ImgArray, dtype=np.float32)
-        # image = np.squeeze(image)
-        # # print(image)
-
-
-
-
-        #image = self.AdjustPixelRange(image, self.window_level, self.window_width) #지현
         image = self.AdjustPixelRange(self.cur_image, self.window_level, self.window_width) #지현
         
         image = qimage2ndarray.array2qimage(image)
