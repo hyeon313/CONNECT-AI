@@ -342,10 +342,6 @@ class MyApp(QMainWindow):
         self.wg.view_1.setMouseTracking(True)
         self.wg.view_2.setMouseTracking(True)
 
-    def mouseMoveEvent(self, event):
-        txt = "Mouse 위치 ; x={0},y={1}".format(event.x(), event.y()) 
-        self.wg.lbl_pos.setText(txt)
-        self.wg.lbl_pos.adjustSize()
 
     def wheelEvent(self, event):
         
@@ -367,6 +363,9 @@ class MyApp(QMainWindow):
     
 
     def mouseMoveEvent(self, event):
+        txt = "Mouse 위치 ; x={0},y={1}".format(event.x(), event.y()) 
+        self.wg.lbl_pos.setText(txt)
+        self.wg.lbl_pos.adjustSize()
         # 지현
         if self.LRClicked:
             # 기준점
