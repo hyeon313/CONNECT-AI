@@ -1,7 +1,7 @@
 import sys
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QWidget, QHBoxLayout,\
      QVBoxLayout, QAction, QFileDialog, QGraphicsView, QGraphicsScene)
-from PyQt5.QtGui import QPixmap, QIcon, QImage
+from PyQt5.QtGui import QPixmap, QIcon, QImage, QWheelEvent
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 # import Utility
@@ -58,6 +58,9 @@ class MyApp(QMainWindow):
         self.Ny = 0 #이미지 y차원
         self.NofI = 0 #이미지 개수
 
+        # 전체 이미지 정보
+
+
         self.cur_idx = 0 #현시점 띄워줄 이미지 
         self.cur_image = [] #현재 선택된 한장의 이미지
         self.EntireImage = [] #읽어드린 이미지스택(3차원) 전체 이미지
@@ -84,7 +87,7 @@ class MyApp(QMainWindow):
         
         # dialog Button===> 원하는 이미지 번호를 받을 dialog 생성
         Dbtn = QPushButton('&ImgNum', self)
-        Dbtn.move(900, 565)
+        Dbtn.move(980, 565)
         Dbtn.setCheckable(True)
         Dbtn.toggle()
         Dbtn.clicked.connect(self.showDialog)
@@ -123,7 +126,8 @@ class MyApp(QMainWindow):
             self.cur_idx = self.NofI-1 # num-1값이 NofI(이미지 전체 개수)를 넘어가면 마지막값[223]을 계속 가지게 만든다
         elif self.cur_idx < 0:
             self.cur_idx = self.NofI-224
-###########질문########
+
+        ###########질문########
         # if self.cur_idx == -1: #self.cur_idx가 -1,즉 num이 0을 받아온 상황에서의 조건 생성 중....
         #     QMessageBox.about(self, "메세지", "no")
 
@@ -146,6 +150,25 @@ class MyApp(QMainWindow):
     def onChanged(self,text):
         self.lbl.setText(text)
         self.lbl.adjustSize()
+
+
+    def refresh(self):
+        self.cur_image = self.EntireImage[self.cur_idx]
+
+        image = self.AdjustPixelRange(self.cur_image, self.window_level, self.window_width) #지현
+        
+        image = qimage2ndarray.array2qimage(image)
+        image = QPixmap.fromImage(QImage(image))
+
+        #왼쪽 프레임 이미지 업데이트 필요
+        self.wg.lbl_original_img.addPixmap(image)
+        self.wg.lbl_blending_img.addPixmap(image)
+        self.wg.view_1.setScene(self.wg.lbl_original_img)
+        self.wg.view_2.setScene(self.wg.lbl_blending_img)
+        self.wg.view_1.show()
+        self.wg.view_2.show()
+
+
 
     #종엄
     #btn1이 버튼 클릭으로부터 호출 할 btn1_clicked함수 선언
@@ -287,6 +310,26 @@ class MyApp(QMainWindow):
         txt = "Mouse 위치 ; x={0},y={1}".format(event.x(), event.y()) 
         self.wg.lbl_pos.setText(txt)
         self.wg.lbl_pos.adjustSize()
+
+    def wheelEvent(self, event):
+        
+        n_scroll = int(event.angleDelta().y() / 120)
+        
+        self.cur_idx = self.cur_idx + n_scroll
+        if self.cur_idx < 0:
+            self.cur_idx = 0
+        if self.cur_idx > self.NofI-1:
+            self.cur_idx = self.NofI-1
+
+        print (self.cur_idx)
+        # n_scroll = int(event.angleDelta().y() /120)
+        
+        
+        # self.cur_idx = self.cur_idx +n_scroll
+        # print(self.cur_idx)
+        self.refresh()
+         
+        
   
 if __name__ == '__main__':
     app = QApplication(sys.argv)
