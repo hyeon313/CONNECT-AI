@@ -1,21 +1,16 @@
 '''
 영민
-이전, 다음, 다이얼로그 버튼
-    버튼 변수명 변경
-    생성 및 초기화 위치 변경
-
+이전, 다음, 다이얼로그 버튼 (버튼 변수명 변경, 생성 및 초기화 위치 변경)
 폴더 경로 불러오기 추가
 '''
 
 import sys
-# from PyQt5 import QtCore
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QWidget, QHBoxLayout,\
     QVBoxLayout, QAction, QFileDialog, QGraphicsView, QGraphicsScene, QCheckBox, QComboBox, QPushButton,\
          QInputDialog)
 from PyQt5.QtGui import QPixmap, QIcon, QImage, QWheelEvent, QPainter, QPen, QBrush
 from PyQt5.QtCore import Qt, QPoint
-# from PyQt5.QtWidgets import *
-# import Utility
+
 import pydicom # DICOM파일(국제 표준에 따라 생성된 메디컬 이미지 파일)을 
                # 가져오기 위해 python packages 중 하나인 pydicom을 import
 import numpy as np
