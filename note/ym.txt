@@ -3,3 +3,15 @@
 
 9.10
 마스크된 좌표를 1로 표시한 numpy array를 CSV파일로 저장하기 완료
+
+~9.14
+이전, 다음, 다이얼로그 버튼 (버튼 변수명 변경, 생성 및 초기화 위치 변경)
+폴더 경로 불러오기 추가
+1차 merge 완료
+  mask combo box 동작 문제(추후 수정할 예정)
+ctrl + left click 그리기 
+  완료
+shift + left click 지우기
+  완료
+ctrl + z 기능 구현
+  완료
