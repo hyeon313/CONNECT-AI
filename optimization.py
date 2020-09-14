@@ -131,14 +131,11 @@ class MyApp(QMainWindow):
         self.show()
     
     def openImage(self):
-        folder_path = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
-        if folder_path == "":
-            pass
-        else:
+        try:
+            folder_path = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
             reader = itk.ImageSeriesReader() 
             dicom_names = reader.GetGDCMSeriesFileNames(folder_path)
             reader.SetFileNames(dicom_names)
-
             images = reader.Execute()
             ImgArray = itk.GetArrayFromImage(images)   
             self.EntireImage = np.asarray(ImgArray, dtype=np.float32) 
@@ -150,6 +147,8 @@ class MyApp(QMainWindow):
             self.mask_imgList = [[qimage2ndarray.array2qimage(np.zeros((self.Nx, self.Ny, 4)))] for _ in range(self.NofI)]
             self.refresh()
             self.isOpened = True
+        except:
+            return
 
     def showDialog(self):
         num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num')
