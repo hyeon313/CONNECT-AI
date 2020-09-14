@@ -17,3 +17,9 @@ A: mouseReleaseEvent 이미지칸 내부가 아닌 외부에서만 뗄 때 인�
 mousePressEvent를 토글로 설정하여 마우스의 왼쪽과 오른쪽 버튼을 동시에 누르면 첫 클릭한 좌표에서 이동한 좌표까지의 거리를 측정할 수 있음
 + ju_ImageAnnotationTool.py 코드와 합치면
 측정된 거리 만큼 width, level 적용한 뒤 'next' or 'previous' 버튼을 누르면 전체 이미지의 width, level이 적용된 것을 확인 할 수 있음
+
+9.14.
+open시 예외 처리
+  -> try, except문을 사용하여 예외처리 완료
+
+예정 width, level숫자 입력하여 적용시키기
