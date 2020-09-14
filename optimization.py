@@ -1,6 +1,8 @@
 '''
 최적화 중
-
+width,level 박스
+scroll
+pen 
 '''
 
 import sys
@@ -35,12 +37,11 @@ class MyWidget(QWidget):
         self.drawCheckBox = QCheckBox('Draw', self)
         self.maskCheckBox = QCheckBox('Masking', self)
         self.blendCheckBox = QCheckBox('Blended Mask on', self)
-        # 영민 
-        # 버튼 변수명, 생성위치 변경
+
         self.dialogBtn = QPushButton('&ImgNum', self)  
         self.previousBtn = QPushButton('&previous', self)
         self.nextBtn = QPushButton('&next', self)
-        # 단축키
+
         self.previousBtn.setShortcut('Ctrl+1')
         self.nextBtn.setShortcut('Ctrl+2')
 
