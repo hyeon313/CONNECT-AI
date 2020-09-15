@@ -384,12 +384,9 @@ class MyApp(QMainWindow):
     def deleteMask(self):
         if self.isOpened:
             if len(self.mask_arrList[self.cur_idx]) > 1:
-                print()
-                print(self.wg.maskComboBox.currentIndex())
                 del self.mask_arrList[self.cur_idx][self.wg.maskComboBox.currentIndex()]
                 del self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()]
                 self.wg.maskComboBox.removeItem(self.wg.maskComboBox.currentIndex())
-                print(self.wg.maskComboBox.currentIndex())
                 self.maskComboBoxActivated(self.wg.maskComboBox.currentIndex())
 
     def maskComboBoxActivated(self, index):
