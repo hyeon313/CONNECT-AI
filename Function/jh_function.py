@@ -1,10 +1,11 @@
 '''
 level, width 박스
 menubar 구현 ( open, quit, adjust, save, save all)
-adjust 코드 구현하기
+adjust 코드 구현하기(완료, 창이 2개 뜨긴 하지만 설정은 됨)
 save, save all은 일단 quit와 동일시
 
 '''
+
 
 import sys
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QWidget, QHBoxLayout,\
@@ -123,7 +124,6 @@ class MyApp(QMainWindow):
         filemenu = menubar.addMenu('&Image')
         filemenu.addAction(adjustAction)
         
-
         self.wg.addMaskBtn.clicked.connect(self.addMask)
         self.wg.maskCheckBox.stateChanged.connect(self.onMasking)
         self.wg.blendCheckBox.stateChanged.connect(self.showBlendedMask)
@@ -142,7 +142,7 @@ class MyApp(QMainWindow):
         self.wg.view_1.setMouseTracking(True)
         self.wg.view_2.setMouseTracking(True)
         
-        self.setWindowTitle('Test Image')
+        self.setWindowTitle('Medical Image Viewer')
         self.setGeometry(300, 300, 1100, 600)
         self.show()
     
@@ -167,17 +167,14 @@ class MyApp(QMainWindow):
             return
 
     def adjustImage(self): # level, width 설정
-        num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num')
-        self.cur_idx = num - 1
-        print("show image",self.cur_idx + 1)
-        if self.cur_idx > self.NofI-1:
-            self.cur_idx = self.NofI-1
-        elif self.cur_idx < 0:
-            self.cur_idx = self.NofI-224
+        num1, ok = QInputDialog.getInt(self, 'Level', 'Level Set')
+        num2, ok = QInputDialog.getInt(self, 'Width', 'Width Set')
+        self.window_level = num1
+        self.window_width = num2
         self.refresh()
 
     def showDialog(self):
-        num, ok = QInputDialog.getInt(self, 'W&L', 'Set')
+        num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num')
         self.cur_idx = num - 1
         print("show image",self.cur_idx + 1)
         if self.cur_idx > self.NofI-1:
