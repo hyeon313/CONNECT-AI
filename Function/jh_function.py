@@ -1,14 +1,18 @@
 '''
-level, width 입력하면 값 넘겨주는 코드
+level, width 박스
+menubar 구현 ( open, quit, adjust, save, save all)
+adjust 코드 구현하기
+save, save all은 일단 quit와 동일시
+
 '''
 
 import sys
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QWidget, QHBoxLayout,\
     QVBoxLayout, QAction, QFileDialog, QGraphicsView, QGraphicsScene, QCheckBox, QComboBox, QPushButton,\
-         QInputDialog)
+         QInputDialog, qApp)
 from PyQt5.QtGui import QPixmap, QIcon, QImage, QWheelEvent, QPainter, QPen, QBrush
 from PyQt5.QtCore import Qt, QPoint
-
+from PyQt5 import QtWidgets, QtCore
 import pydicom 
 import numpy as np
 import SimpleITK as itk
@@ -35,7 +39,6 @@ class MyWidget(QWidget):
         self.dialogBtn = QPushButton('&ImgNum', self)
         self.previousBtn = QPushButton('&previous', self)
         self.nextBtn = QPushButton('&next', self)
-        self.wl_wwBtn = QPushButton('&level, width', self)
         
         self.previousBtn.setShortcut('Ctrl+1')
         self.nextBtn.setShortcut('Ctrl+2')
@@ -56,7 +59,6 @@ class MyWidget(QWidget):
         self.hOptionbox.addWidget(self.previousBtn)
         self.hOptionbox.addWidget(self.nextBtn)
         self.hOptionbox.addWidget(self.dialogBtn)
-        self.hOptionbox.addWidget(self.wl_wwBtn)
         
         self.vbox = QVBoxLayout()
         self.vbox.addLayout(self.hViewbox)
@@ -100,10 +102,28 @@ class MyApp(QMainWindow):
     def initUI(self):
         openAction = QAction(QIcon('exit.png'), 'Open', self)
         openAction.triggered.connect(self.openImage)
+        exitAction = QAction('Quit', self)
+        exitAction.triggered.connect(qApp.quit)
+        saveAction = QAction('Save', self)
+        saveAction.triggered.connect(qApp.quit)
+        saveallAction = QAction('Save all', self)
+        saveallAction.triggered.connect(qApp.quit)
+        adjustAction = QAction('Adjust', self)
+        adjustAction.triggered.connect(self.adjustImage)
 
-        self.toolbar = self.addToolBar('Open')
-        self.toolbar.addAction(openAction)
+        self.statusBar()
+
+        menubar = self.menuBar()
+        menubar.setNativeMenuBar(False)
+        filemenu = menubar.addMenu('&File')
+        filemenu.addAction(openAction)
+        filemenu.addAction(saveAction)
+        filemenu.addAction(saveallAction)
+        filemenu.addAction(exitAction)
+        filemenu = menubar.addMenu('&Image')
+        filemenu.addAction(adjustAction)
         
+
         self.wg.addMaskBtn.clicked.connect(self.addMask)
         self.wg.maskCheckBox.stateChanged.connect(self.onMasking)
         self.wg.blendCheckBox.stateChanged.connect(self.showBlendedMask)
@@ -146,8 +166,18 @@ class MyApp(QMainWindow):
         except:
             return
 
-    def showDialog(self):
+    def adjustImage(self): # level, width 설정
         num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num')
+        self.cur_idx = num - 1
+        print("show image",self.cur_idx + 1)
+        if self.cur_idx > self.NofI-1:
+            self.cur_idx = self.NofI-1
+        elif self.cur_idx < 0:
+            self.cur_idx = self.NofI-224
+        self.refresh()
+
+    def showDialog(self):
+        num, ok = QInputDialog.getInt(self, 'W&L', 'Set')
         self.cur_idx = num - 1
         print("show image",self.cur_idx + 1)
         if self.cur_idx > self.NofI-1:
