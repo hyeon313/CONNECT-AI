@@ -25,6 +25,6 @@ open시 예외 처리
 예정 width, level숫자 입력하여 적용시키기
 
 9.15.
-funtion => open, quit, adjust를 menubar로 바꿈, adjust설정 함수 구현 필요
-optimization => lmg Num, previous, next버튼들 각 예외 처리 하기(이미지 파일이 업로드 되어있지 않으면 프로그램이 종료됨.)
+funtion => open, quit, adjust를 menubar로 바꿈, adjust설정 함수 구현은 완료됨.(창이 2개 뜸..ㅜ)
+optimization => lmg Num, previous, next버튼들 각 예외 처리 하기(이미지 파일이 업로드 되어있지 않으면 프로그램이 종료됨.), refresh()함수 예외 처리하기
 
