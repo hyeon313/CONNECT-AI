@@ -15,3 +15,8 @@ shift + left click 지우기
   완료
 ctrl + z 기능 구현
   완료
+
+9.15
+pen size 변경 기능 구현
+mask combo box & add mask 문제 해결
+delete mask 기능 추가
