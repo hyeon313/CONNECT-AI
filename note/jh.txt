@@ -29,6 +29,9 @@ function => open, quit, adjust를 menubar로 바꿈, adjust설정 함수 구현�
 optimization => lmg Num, previous, next버튼들 각 예외 처리 하기(이미지 파일이 업로드 되어있지 않으면 프로그램이 종료됨.), refresh()함수 예외 처리하기
 
 9.16.
+function => wheel 수정완료!
 optimization => try, execpt 적용완료
-function => wheel 수정중...ㅜ
 
+9.17.
+function => zoom(같이)
+optimization => 9.16.까지 된 것 보면서 안된 부분 최적화하기(같은 코드를 사용하면 함수로 만들어서 설정. 주석 삭제 등)
