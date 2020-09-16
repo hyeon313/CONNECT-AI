@@ -9,10 +9,10 @@ pen
 import sys
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QWidget, QHBoxLayout,\
     QVBoxLayout, QAction, QFileDialog, QGraphicsView, QGraphicsScene, QCheckBox, QComboBox, QPushButton,\
-         QInputDialog)
+         QInputDialog, qApp)
 from PyQt5.QtGui import QPixmap, QIcon, QImage, QWheelEvent, QPainter, QPen, QBrush
 from PyQt5.QtCore import Qt, QPoint
-
+from PyQt5 import QtWidgets, QtCore
 import pydicom 
 import numpy as np
 import SimpleITK as itk
