@@ -1,5 +1,6 @@
 '''
 최적화 중
+refresh() 최적화
 width,level 박스
 scroll
 pen 
@@ -104,9 +105,26 @@ class MyApp(QMainWindow):
     def initUI(self):
         openAction = QAction(QIcon('exit.png'), 'Open', self)
         openAction.triggered.connect(self.openImage)
+        exitAction = QAction('Quit', self)
+        exitAction.triggered.connect(qApp.quit)
+        saveAction = QAction('Save', self)
+        saveAction.triggered.connect(qApp.quit)
+        saveallAction = QAction('Save all', self)
+        saveallAction.triggered.connect(qApp.quit)
+        adjustAction = QAction('Adjust', self)
+        adjustAction.triggered.connect(self.adjustImage)
 
-        self.toolbar = self.addToolBar('Open')
-        self.toolbar.addAction(openAction)
+        self.statusBar()
+
+        menubar = self.menuBar()
+        menubar.setNativeMenuBar(False)
+        filemenu = menubar.addMenu('&File')
+        filemenu.addAction(openAction)
+        filemenu.addAction(saveAction)
+        filemenu.addAction(saveallAction)
+        filemenu.addAction(exitAction)
+        filemenu = menubar.addMenu('&Image')
+        filemenu.addAction(adjustAction)
         
         self.wg.addMaskBtn.clicked.connect(self.addMask)
         self.wg.maskCheckBox.stateChanged.connect(self.onMasking)
@@ -161,25 +179,28 @@ class MyApp(QMainWindow):
         self.refresh()
 
     def refresh(self):
-        self.wg.maskComboBox.clear()
-        for i in range(len(self.mask_imgList[self.cur_idx])):
-            self.wg.maskComboBox.addItem('Mask' + str(i + 1))
+        try:
+            self.wg.maskComboBox.clear()
+            for i in range(len(self.mask_imgList[self.cur_idx])):
+                self.wg.maskComboBox.addItem('Mask' + str(i + 1))
 
-        cur_image = self.EntireImage[self.cur_idx]
-        self.cur_img_arr = self.AdjustPixelRange(cur_image, self.window_level, self.window_width) #지현
-        self.cur_image = qimage2ndarray.array2qimage(self.cur_img_arr)
-        cur_image = QPixmap.fromImage(QImage(self.cur_image))
+            cur_image = self.EntireImage[self.cur_idx]
+            self.cur_img_arr = self.AdjustPixelRange(cur_image, self.window_level, self.window_width) #지현
+            self.cur_image = qimage2ndarray.array2qimage(self.cur_img_arr)
+            cur_image = QPixmap.fromImage(QImage(self.cur_image))
 
-        self.wg.lbl_original_img.addPixmap(cur_image)
-        self.wg.lbl_blending_img.addPixmap(cur_image)
-        self.wg.view_1.setScene(self.wg.lbl_original_img)
-        self.wg.view_2.setScene(self.wg.lbl_blending_img)
+            self.wg.lbl_original_img.addPixmap(cur_image)
+            self.wg.lbl_blending_img.addPixmap(cur_image)
+            self.wg.view_1.setScene(self.wg.lbl_original_img)
+            self.wg.view_2.setScene(self.wg.lbl_blending_img)
 
-        self.cur_maskPixmap = QPixmap.fromImage(\
-            QImage(self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()]))
+            self.cur_maskPixmap = QPixmap.fromImage(\
+                QImage(self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()]))
 
-        self.wg.lbl_blending_img.addPixmap(self.cur_maskPixmap)
-
+            self.wg.lbl_blending_img.addPixmap(self.cur_maskPixmap)
+        except:
+            return
+        
     def previousBtn_clicked(self):
         self.cur_idx = self.cur_idx - 1
                 
