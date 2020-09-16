@@ -51,6 +51,8 @@ class MyWidget(QWidget):
         self.hViewbox = QHBoxLayout()
         self.hViewbox.addWidget(self.view_1)
         self.hViewbox.addWidget(self.view_2)
+        self.view_1.wheelEvent = self.wheelEvent
+        self.view_2.wheelEvent = self.wheelEvent
 
         self.hOptionbox = QHBoxLayout()
         self.hOptionbox.addWidget(self.deleteCurMaskBtn)
