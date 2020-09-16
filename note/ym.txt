@@ -20,3 +20,7 @@ ctrl + z 기능 구현
 pen size 변경 기능 구현
 mask combo box & add mask 문제 해결
 delete mask 기능 추가
+
+9.16
+delete mask 문제 해결
+ctrl + z(mouse release 시) 기능 개선
