@@ -300,10 +300,11 @@ class MyApp(QMainWindow):
     def mouseReleaseEvent(self, event):
         if self.isOpened:
             if event.button() == Qt.LeftButton:
-                self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()] = \
-                    self.cur_maskPixmap.toImage()
-                self.drawn_arrList.append(qimage2ndarray.byte_view(self.cur_maskPixmap.toImage()))
-                self.refreshMaskView()
+                if self.onCtrl or self.onShift:
+                    self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()] = \
+                        self.cur_maskPixmap.toImage()
+                    self.drawn_arrList.append(qimage2ndarray.byte_view(self.cur_maskPixmap.toImage()))
+                    self.refreshMaskView()
                 self.drawing = False
 
     def keyPressEvent(self, event):
@@ -387,7 +388,12 @@ class MyApp(QMainWindow):
                 del self.mask_arrList[self.cur_idx][self.wg.maskComboBox.currentIndex()]
                 del self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()]
                 self.wg.maskComboBox.removeItem(self.wg.maskComboBox.currentIndex())
-                self.maskComboBoxActivated(self.wg.maskComboBox.currentIndex())
+                cur_mask_index = self.wg.maskComboBox.currentIndex()
+                self.wg.maskComboBox.clear()
+                for i in range(len(self.mask_imgList[self.cur_idx])):
+                    self.wg.maskComboBox.addItem('Mask' + str(i + 1))
+                self.maskComboBoxActivated(cur_mask_index)
+                self.wg.maskComboBox.setCurrentIndex(cur_mask_index)
 
     def maskComboBoxActivated(self, index):
         self.cur_maskPixmap = QPixmap.fromImage(QImage(self.mask_imgList[self.cur_idx][index]))
