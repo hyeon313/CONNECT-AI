@@ -3,6 +3,7 @@ level, width 박스
 menubar 구현 ( open, quit, adjust, save, save all)
 adjust 코드 구현하기(완료, 창이 2개 뜨긴 하지만 설정은 됨)
 save, save all은 일단 quit와 동일시
+refresh() 최적화
 
 '''
 
@@ -167,16 +168,15 @@ class MyApp(QMainWindow):
             return
 
     def adjustImage(self): # level, width 설정
-        num1, ok = QInputDialog.getInt(self, 'Level', 'Level Set')
-        num2, ok = QInputDialog.getInt(self, 'Width', 'Width Set')
-        self.window_level = num1
-        self.window_width = num2
+        level, ok = QInputDialog.getInt(self, 'Level', 'Level Set')
+        width, ok = QInputDialog.getInt(self, 'Width', 'Width Set')
+        self.window_level = level
+        self.window_width = width
         self.refresh()
 
     def showDialog(self):
-        num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num')
-        self.cur_idx = num - 1
-        print("show image",self.cur_idx + 1)
+        page, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num')
+        self.cur_idx = page - 1
         if self.cur_idx > self.NofI-1:
             self.cur_idx = self.NofI-1
         elif self.cur_idx < 0:
@@ -184,24 +184,28 @@ class MyApp(QMainWindow):
         self.refresh()
 
     def refresh(self):
-        self.wg.maskComboBox.clear()
-        for i in range(len(self.mask_imgList[self.cur_idx])):
-            self.wg.maskComboBox.addItem('Mask' + str(i + 1))
+        try:
+            self.wg.maskComboBox.clear()
+            for i in range(len(self.mask_imgList[self.cur_idx])):
+                self.wg.maskComboBox.addItem('Mask' + str(i + 1))
 
-        cur_image = self.EntireImage[self.cur_idx]
-        self.cur_img_arr = self.AdjustPixelRange(cur_image, self.window_level, self.window_width) #지현
-        self.cur_image = qimage2ndarray.array2qimage(self.cur_img_arr)
-        cur_image = QPixmap.fromImage(QImage(self.cur_image))
+            cur_image = self.EntireImage[self.cur_idx]
+            self.cur_img_arr = self.AdjustPixelRange(cur_image, self.window_level, self.window_width) #지현
+            self.cur_image = qimage2ndarray.array2qimage(self.cur_img_arr)
+            cur_image = QPixmap.fromImage(QImage(self.cur_image))
 
-        self.wg.lbl_original_img.addPixmap(cur_image)
-        self.wg.lbl_blending_img.addPixmap(cur_image)
-        self.wg.view_1.setScene(self.wg.lbl_original_img)
-        self.wg.view_2.setScene(self.wg.lbl_blending_img)
+            self.wg.lbl_original_img.addPixmap(cur_image)
+            self.wg.lbl_blending_img.addPixmap(cur_image)
+            self.wg.view_1.setScene(self.wg.lbl_original_img)
+            self.wg.view_2.setScene(self.wg.lbl_blending_img)
 
-        self.cur_maskPixmap = QPixmap.fromImage(\
-            QImage(self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()]))
+            self.cur_maskPixmap = QPixmap.fromImage(\
+                QImage(self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()]))
 
-        self.wg.lbl_blending_img.addPixmap(self.cur_maskPixmap)
+            self.wg.lbl_blending_img.addPixmap(self.cur_maskPixmap)
+        except:
+            return
+        
 
     def previousBtn_clicked(self):
         self.cur_idx = self.cur_idx - 1
