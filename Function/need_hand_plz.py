@@ -1,5 +1,7 @@
 '''
 수정 필요!
+zoom in/ out
+좌표에서 z가 계속 바뀌도록
 '''
 
 import sys
@@ -260,16 +262,14 @@ class MyApp(QMainWindow):
 
     def wheelEvent(self, event):
         try:
-            # n_scroll = int(event.angleDelta().y() / 120)
+            n_scroll = int(event.angleDelta().y() / 120)
             
-            # self.cur_idx = self.cur_idx + n_scroll
-            # if self.cur_idx < 0:
-            #     self.cur_idx = 0
-            # if self.cur_idx > self.NofI-1:
-            #     self.cur_idx = self.NofI-1
-            # print("show image",self.cur_idx + 1)
-            self.zoom += event.angleDelta().y()/2880
-            self.wg.view_2.scale(self.zoom, self.zoom)
+            self.cur_idx = self.cur_idx + n_scroll
+            if self.cur_idx < 0:
+                self.cur_idx = 0
+            if self.cur_idx > self.NofI-1:
+                self.cur_idx = self.NofI-1
+            print("show image",self.cur_idx + 1)
             self.refresh() 
         except:
             return
@@ -363,9 +363,12 @@ class MyApp(QMainWindow):
         if self.onCtrl and event.key() == Qt.Key_Z:
             self.erasePreviousLine()
         if self.onCtrl and event.key() == Qt.Key_Plus:
-            self.zoomIn()
+            self.zoom += 1
+            self.wg.view_2.scale(self.zoom, self.zoom)
         if self.onCtrl and event.key() == Qt.Key_Minus:
-            self.zoomOut()
+            self.zoom -= 1
+            self.wg.view_2.scale(self.zoom, self.zoom)
+
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Control:
