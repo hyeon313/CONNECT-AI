@@ -95,7 +95,6 @@ class MyApp(QMainWindow):
         self.EntireImage = [] 
         self.adjustedImage = []
 
-        # self.isOpened = False
         self.drawing = False
         self.lastPoint = QPoint()
         self.mask_arrList = []
