@@ -33,5 +33,7 @@ function => wheel 수정완료!
 optimization => try, execpt 적용완료
 
 9.17.
-function => zoom(같이)
+function => zoom(같이) 기능이 되긴하는데 어설프게 됨
 optimization => 9.16.까지 된 것 보면서 안된 부분 최적화하기(같은 코드를 사용하면 함수로 만들어서 설정. 주석 삭제 등)
+add => 마우스 위치 x, y, z, imagevalue 값 구하기 (완성!) / zoom 설정하기
+
