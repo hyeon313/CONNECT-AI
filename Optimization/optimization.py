@@ -39,9 +39,6 @@ class MyWidget(QWidget):
         self.previousBtn = QPushButton('&previous', self)
         self.nextBtn = QPushButton('&next', self)
 
-        self.previousBtn.setShortcut('Ctrl+1')
-        self.nextBtn.setShortcut('Ctrl+2')
-
         self.lbl_pen_size = QLabel('Pen & Eraser size', self)
         self.lbl_pen_size.setAlignment(Qt.AlignCenter)
         self.lbl_pos = QLabel()
@@ -83,6 +80,7 @@ class MyApp(QMainWindow):
         self.window_width = 400
         self.deltaWL = 0
         self.deltaWW = 0
+        self.zoom = 1
 
         self.Nx = 0 
         self.Ny = 0 
@@ -93,7 +91,6 @@ class MyApp(QMainWindow):
         self.EntireImage = [] 
         self.adjustedImage = []
 
-        # self.isOpened = False
         self.drawing = False
         self.lastPoint = QPoint()
         self.mask_arrList = []
@@ -154,9 +151,6 @@ class MyApp(QMainWindow):
 
         self.wg.view_2.keyPressEvent = self.keyPressEvent
         self.wg.view_2.keyReleaseEvent = self.keyReleaseEvent
-
-        self.wg.view_1.wheelEvent = self.wheelEvent
-        self.wg.view_2.wheelEvent = self.wheelEvent
         
         self.setWindowTitle('Test Image')
         self.setGeometry(300, 300, 1100, 600)
@@ -207,8 +201,8 @@ class MyApp(QMainWindow):
             for i in range(len(self.mask_imgList[self.cur_idx])):
                 self.wg.maskComboBox.addItem('Mask' + str(i + 1))
 
-            cur_image = self.EntireImage[self.cur_idx]
-            self.cur_img_arr = self.AdjustPixelRange(cur_image, self.window_level, self.window_width)
+            self.cur_orginal_image = self.EntireImage[self.cur_idx]
+            self.cur_img_arr = self.AdjustPixelRange(self.cur_orginal_image, self.window_level, self.window_width)
             self.cur_image = qimage2ndarray.array2qimage(self.cur_img_arr)
             cur_image = QPixmap.fromImage(QImage(self.cur_image))
 
@@ -234,7 +228,6 @@ class MyApp(QMainWindow):
             self.refresh()
         except:
             return
-
 
     def nextBtn_clicked(self):
         try:
@@ -269,9 +262,6 @@ class MyApp(QMainWindow):
 
     def mouseMoveEvent(self, event):
         try:
-            txt = "Mouse 위치 ; x={0},y={1}".format(event.x(), event.y()) 
-            self.wg.lbl_pos.setText(txt)
-            self.wg.lbl_pos.adjustSize()
             if self.LRClicked:
                 rX = np.array(self.LRpoint[0])
                 rY = np.array(self.LRpoint[1])
@@ -318,6 +308,10 @@ class MyApp(QMainWindow):
                 self.wg.lbl_blending_img.addPixmap(self.cur_maskPixmap)
             
             self.lastPoint = event.pos()
+            self.lastPoint = event.pos()
+            txt = "x={0}, y={1}, z={2}, image value={3}".format(event.x(), event.y(), self.cur_idx+1, self.cur_orginal_image[event.x(),event.y()]) 
+            self.wg.lbl_pos.setText(txt)
+            self.wg.lbl_pos.adjustSize()
         except:
             return
 
@@ -355,7 +349,19 @@ class MyApp(QMainWindow):
             self.onShift = True
         if self.onCtrl and event.key() == Qt.Key_Z:
             self.erasePreviousLine()
-        
+        if self.onCtrl and event.key() == Qt.Key_Plus:
+            self.zoom *= 1.25
+            self.wg.view_2.scale(self.zoom, self.zoom)
+            print('zoom in = ', self.zoom)
+        if self.onCtrl and event.key() == Qt.Key_Minus:
+            self.zoom *= 0.8
+            self.wg.view_2.scale(self.zoom, self.zoom)
+            print('zoom out = ', self.zoom)
+        if self.onCtrl and event.key() == Qt.Key_Asterisk:
+            # self.wg.view_2.adjustSize() 
+            self.zoom = 1
+            self.refresh()
+            print('asterisk = ', self.zoom)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Control:
