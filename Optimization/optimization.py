@@ -30,7 +30,6 @@ class MyWidget(QWidget):
         self.deleteCurMaskBtn = QPushButton('Delete Current Mask', self)
         self.addMaskBtn = QPushButton('&Add Mask', self)
         self.maskComboBox = QComboBox(self)
-        self.drawCheckBox = QCheckBox('Draw', self)
         self.maskCheckBox = QCheckBox('Masking', self)
         self.blendCheckBox = QCheckBox('Blended Mask on', self)
         self.penSizeEdit = QLineEdit(self)
@@ -60,7 +59,6 @@ class MyWidget(QWidget):
         self.hOptionbox.addWidget(self.maskComboBox)
         self.hOptionbox.addWidget(self.lbl_pen_size)
         self.hOptionbox.addWidget(self.penSizeEdit)
-        self.hOptionbox.addWidget(self.drawCheckBox)
         self.hOptionbox.addWidget(self.maskCheckBox)
         self.hOptionbox.addWidget(self.blendCheckBox)
         self.hOptionbox.addWidget(self.previousBtn)
@@ -95,6 +93,7 @@ class MyApp(QMainWindow):
         self.EntireImage = [] 
         self.adjustedImage = []
 
+        # self.isOpened = False
         self.drawing = False
         self.lastPoint = QPoint()
         self.mask_arrList = []
@@ -155,6 +154,9 @@ class MyApp(QMainWindow):
 
         self.wg.view_2.keyPressEvent = self.keyPressEvent
         self.wg.view_2.keyReleaseEvent = self.keyReleaseEvent
+
+        self.wg.view_1.wheelEvent = self.wheelEvent
+        self.wg.view_2.wheelEvent = self.wheelEvent
         
         self.setWindowTitle('Test Image')
         self.setGeometry(300, 300, 1100, 600)
@@ -180,7 +182,7 @@ class MyApp(QMainWindow):
         except:
             return
 
-    def adjustImage(self): # level, width 설정
+    def adjustImage(self):
         level, ok = QInputDialog.getInt(self, 'Level', 'Level Set')
         width, ok = QInputDialog.getInt(self, 'Width', 'Width Set')
         self.window_level = level
@@ -353,6 +355,7 @@ class MyApp(QMainWindow):
             self.onShift = True
         if self.onCtrl and event.key() == Qt.Key_Z:
             self.erasePreviousLine()
+        
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Control:
@@ -400,7 +403,6 @@ class MyApp(QMainWindow):
         except:
             return
                 
-
     def showBlendedMask(self, state):
         try:
             if Qt.Checked == state:
