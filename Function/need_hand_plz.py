@@ -276,9 +276,6 @@ class MyApp(QMainWindow):
 
     def mouseMoveEvent(self, event):
         try:
-            txt = "Mouse 위치 ; x={0},y={1}, z={2}, value={3}".format(event.x(), event.y(), self.cur_idx, self.cur_orginal_image[event.x(),event.y()]) 
-            self.wg.lbl_pos.setText(txt)
-            self.wg.lbl_pos.adjustSize()
             if self.LRClicked:
                 rX = np.array(self.LRpoint[0])
                 rY = np.array(self.LRpoint[1])
@@ -325,6 +322,9 @@ class MyApp(QMainWindow):
                 self.wg.lbl_blending_img.addPixmap(self.cur_maskPixmap)
             
             self.lastPoint = event.pos()
+            txt = "x={0}, y={1}, z={2}, image value={3}".format(event.x(), event.y(), self.cur_idx+1, self.cur_orginal_image[event.x(),event.y()]) 
+            self.wg.lbl_pos.setText(txt)
+            self.wg.lbl_pos.adjustSize()
         except:
             return
 
@@ -375,17 +375,6 @@ class MyApp(QMainWindow):
             self.onCtrl = False
         if event.key() == Qt.Key_Shift:
             self.onShift = False
-
-    def zoomIn(self):
-        self.scaleImage(1.25)
-
-    def zoomOut(self):
-        self.scaleImage(0.8)
-
-    def scaleImage(self, factor):
-        self.scaleFactor *= factor
-        self.imageLabel.resize(self.scaleFactor * self.imageLabel.pixmap().size())
-        self.refresh()
         
     def erasePreviousLine(self):
         if len(self.drawn_arrList) > 1:
