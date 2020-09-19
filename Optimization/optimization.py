@@ -177,16 +177,15 @@ class MyApp(QMainWindow):
             return
 
     def adjustImage(self):
-        level, ok = QInputDialog.getInt(self, 'Level', 'Level Set')
-        width, ok = QInputDialog.getInt(self, 'Width', 'Width Set')
+        level, ok = QInputDialog.getInt(self, 'Level', 'Level Set', value=self.window_level)
+        width, ok = QInputDialog.getInt(self, 'Width', 'Width Set', value=self.window_width)
         self.window_level = level
         self.window_width = width
         self.refresh()
 
     def showDialog(self):
-        num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num')
+        num, ok = QInputDialog.getInt(self, 'Input ImageNumber', 'Enter Num', value=self.cur_idx+1)
         self.cur_idx = num - 1
-        print("show image",self.cur_idx + 1)
         if self.cur_idx > self.NofI-1:
             self.cur_idx = self.NofI-1
         elif self.cur_idx < 0:
