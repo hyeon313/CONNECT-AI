@@ -357,8 +357,7 @@ class MyApp(QMainWindow):
             self.zoom *= 0.8
             self.wg.view_2.scale(self.zoom, self.zoom)
             print('zoom out = ', self.zoom)
-        if self.onCtrl and event.key() == Qt.Key_Asterisk:
-            # self.wg.view_2.adjustSize() 
+        if self.onCtrl and event.key() == Qt.Key_Asterisk: 
             self.zoom = 1
             self.refresh()
             print('asterisk = ', self.zoom)
