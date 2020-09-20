@@ -1,4 +1,5 @@
 import sys
+import os ##
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QWidget, QHBoxLayout,\
     QVBoxLayout, QAction, QFileDialog, QGraphicsView, QGraphicsScene, QCheckBox, QComboBox, QPushButton,\
          QInputDialog, qApp, QLineEdit)
@@ -95,20 +96,21 @@ class MyApp(QMainWindow):
         self.onCtrl = False
         self.onShift = False
         self.pen_size = 10
+        self.file_names = []
 
         self.wg = MyWidget() 
         self.setCentralWidget(self.wg)
         self.initUI()
         
-    def initUI(self):
+    def initUI(self): ##
         openAction = QAction(QIcon('exit.png'), 'Open', self)
         openAction.triggered.connect(self.openImage)
         exitAction = QAction('Quit', self)
         exitAction.triggered.connect(qApp.quit)
-        saveAction = QAction('Save', self)
-        saveAction.triggered.connect(qApp.quit)
+        saveAction = QAction('Save Current Masks', self)
+        saveAction.triggered.connect(self.saveCurrentMasks)
         saveallAction = QAction('Save all', self)
-        saveallAction.triggered.connect(qApp.quit)
+        saveallAction.triggered.connect(self.saveAllMasks)
         adjustAction = QAction('Adjust', self)
         adjustAction.triggered.connect(self.adjustImage)
 
@@ -152,11 +154,13 @@ class MyApp(QMainWindow):
         self.setGeometry(300, 300, 1100, 600)
         self.show()
     
-    def openImage(self):
+    def openImage(self): ##
         try:
-            folder_path = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
+            self.folder_path = str(QFileDialog.getExistingDirectory(self, "Select Directory"))
             reader = itk.ImageSeriesReader() 
-            dicom_names = reader.GetGDCMSeriesFileNames(folder_path)
+            dicom_names = reader.GetGDCMSeriesFileNames(self.folder_path)
+            for i in range(len(dicom_names)):
+                self.file_names.append(dicom_names[i].replace(self.folder_path + '/', '').replace('.IMA', ''))
             reader.SetFileNames(dicom_names)
             images = reader.Execute()
             ImgArray = itk.GetArrayFromImage(images)   
@@ -241,7 +245,6 @@ class MyApp(QMainWindow):
         img_adjusted = (image - Lower)/range_ratio
         image = img_adjusted.clip(0, 255)
         return image
-    
 
     def wheelEvent(self, event):
         try:
@@ -466,6 +469,29 @@ class MyApp(QMainWindow):
 
     def setPenSize(self, text):
         self.pen_size = int(text)
+
+    def saveCurrentMasks(self):
+        try:
+            save_dir = QFileDialog.getExistingDirectory(self, "Save Current Masks")
+            save_new_dir = save_dir + '/' + self.file_names[self.cur_idx]
+            os.mkdir(save_new_dir)
+            for i in range(len(self.mask_arrList[self.cur_idx])):
+                np.save(save_new_dir + '/' + self.file_names[self.cur_idx] + '_mask_{}.npy'.format(i + 1), \
+                    self.mask_arrList[self.cur_idx][i])
+        except:
+            return
+
+    def saveAllMasks(self):
+        try:
+            save_new_dir = self.folder_path + '/Masks'
+            os.mkdir(save_new_dir)
+            for i in range(len(self.mask_arrList)):
+                for j in range(len(self.mask_arrList[i])):
+                    np.save(save_new_dir + '/' + self.file_names[i] + '_mask_{}.npy'.format(j + 1), \
+                        self.mask_arrList[i][j])
+        except:
+            return 
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
