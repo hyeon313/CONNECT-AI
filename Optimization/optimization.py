@@ -82,7 +82,6 @@ class MyApp(QMainWindow):
         self.window_width = 400
         self.deltaWL = 0
         self.deltaWW = 0
-        self.zoom = 1
 
         self.Nx = 0 
         self.Ny = 0 
@@ -355,14 +354,10 @@ class MyApp(QMainWindow):
             self.erasePreviousLine()
         if self.onCtrl and event.key() == Qt.Key_Plus:
             self.wg.view_2.scale(1.25, 1.25)
-            # self.wg.lbl_blending_img.scale(1.25, 1.25)
         if self.onCtrl and event.key() == Qt.Key_Minus:
             self.wg.view_2.scale(0.8, 0.8)
-            # self.wg.lbl_blending_img.scale(0.8, 0.8)
         if self.onCtrl and event.key() == Qt.Key_Asterisk:
-            self.zoom = 1
             self.refresh()
-            print('asterisk = ', self.zoom)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Control:
