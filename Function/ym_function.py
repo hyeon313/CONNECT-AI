@@ -17,10 +17,10 @@ class MyWidget(QWidget):
     def __init__(self): 
         super().__init__() 
 
-        self.lbl_original_img = QGraphicsScene()
-        self.lbl_blending_img = QGraphicsScene()
-        self.view_1 = QGraphicsView(self.lbl_original_img) 
-        self.view_2 = QGraphicsView(self.lbl_blending_img) 
+        self.scene_1 = QGraphicsScene()
+        self.scene_2 = QGraphicsScene()
+        self.view_1 = QGraphicsView(self.scene_1) 
+        self.view_2 = QGraphicsView(self.scene_2) 
         self.view_1.setFixedSize(514, 514)
         self.view_2.setFixedSize(514, 514)
 
@@ -44,6 +44,7 @@ class MyWidget(QWidget):
         self.hViewbox = QHBoxLayout()
         self.hViewbox.addWidget(self.view_1)
         self.hViewbox.addWidget(self.view_2)
+
         self.view_1.wheelEvent = self.wheelEvent
         self.view_2.wheelEvent = self.wheelEvent
 
@@ -65,6 +66,7 @@ class MyWidget(QWidget):
         self.vbox.addWidget(self.lbl_pos)
         
         self.setLayout(self.vbox)
+    
 
 class MyApp(QMainWindow):
 
@@ -138,18 +140,22 @@ class MyApp(QMainWindow):
         self.wg.previousBtn.clicked.connect(self.previousBtn_clicked)
         self.wg.nextBtn.clicked.connect(self.nextBtn_clicked)
 
-        self.wg.view_1.mouseMoveEvent = self.mouseMoveEvent
-        self.wg.view_1.mousePressEvent = self.mousePressEvent
-        self.wg.view_1.mouseReleaseEvent = self.mouseReleaseEvent
-        self.wg.view_2.mouseMoveEvent = self.mouseMoveEvent
-        self.wg.view_2.mousePressEvent = self.mousePressEvent
-        self.wg.view_2.mouseReleaseEvent = self.mouseReleaseEvent
+        # self.wg.view_1.mouseMoveEvent = self.mouseMoveEvent
+        # self.wg.view_1.mousePressEvent = self.mousePressEvent
+        # self.wg.view_1.mouseReleaseEvent = self.mouseReleaseEvent
+        # self.wg.view_2.mouseMoveEvent = self.mouseMoveEvent
+        # self.wg.view_2.mousePressEvent = self.mousePressEvent
+        # self.wg.view_2.mouseReleaseEvent = self.mouseReleaseEvent
         self.wg.view_1.setMouseTracking(True)
         self.wg.view_2.setMouseTracking(True)
 
-        self.wg.view_2.keyPressEvent = self.keyPressEvent
-        self.wg.view_2.keyReleaseEvent = self.keyReleaseEvent
-        
+        self.wg.scene_1.mouseMoveEvent = self.mouseMoveEvent
+        self.wg.scene_1.mousePressEvent = self.mousePressEvent
+        self.wg.scene_1.mouseReleaseEvent = self.mouseReleaseEvent
+        self.wg.scene_2.mouseMoveEvent = self.mouseMoveEvent
+        self.wg.scene_2.mousePressEvent = self.mousePressEvent
+        self.wg.scene_2.mouseReleaseEvent = self.mouseReleaseEvent
+
         self.setWindowTitle('Test Image')
         self.setGeometry(300, 300, 1100, 600)
         self.show()
@@ -198,25 +204,27 @@ class MyApp(QMainWindow):
             self.wg.maskComboBox.clear()
             for i in range(len(self.mask_imgList[self.cur_idx])):
                 self.wg.maskComboBox.addItem('Mask' + str(i + 1))
+            if self.wg.maskCheckBox.isChecked(): self.wg.maskCheckBox.toggle()
+            if self.wg.blendCheckBox.isChecked(): self.wg.blendCheckBox.toggle()
 
             self.cur_orginal_image = self.EntireImage[self.cur_idx]
             self.cur_img_arr = self.AdjustPixelRange(self.cur_orginal_image, self.window_level, self.window_width)
             self.cur_image = qimage2ndarray.array2qimage(self.cur_img_arr)
             cur_image = QPixmap.fromImage(QImage(self.cur_image))
 
-            self.wg.lbl_original_img.clear()
-            self.wg.lbl_blending_img.clear()
-            self.wg.lbl_original_img.addPixmap(cur_image)
-            self.wg.lbl_blending_img.addPixmap(cur_image)
-            self.wg.view_1.setScene(self.wg.lbl_original_img)
-            self.wg.view_2.setScene(self.wg.lbl_blending_img)
+            self.wg.scene_1.clear()
+            self.wg.scene_2.clear()
+            self.wg.scene_1.addPixmap(cur_image)
+            self.wg.scene_2.addPixmap(cur_image)
+            self.wg.view_1.setScene(self.wg.scene_1)
+            self.wg.view_2.setScene(self.wg.scene_2)
 
             self.cur_maskPixmap = QPixmap.fromImage(\
                 QImage(self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()]))
             self.drawn_arrList = \
                 [qimage2ndarray.byte_view(self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()])]
 
-            self.wg.lbl_blending_img.addPixmap(self.cur_maskPixmap)
+            self.wg.scene_2.addPixmap(self.cur_maskPixmap)
         except:
             return
         
@@ -265,8 +273,10 @@ class MyApp(QMainWindow):
                 rX = np.array(self.LRpoint[0])
                 rY = np.array(self.LRpoint[1])
                 
-                mX = event.globalX()
-                mY = event.globalY()
+                # mX = event.globalX()
+                # mY = event.globalY()
+                mX = event.scenePos().x()
+                mY = event.scenePos().y()
 
                 square = (rX - mX)*(rX - mX) + (rY - mY)*(rY - mY)
                 dist = math.sqrt(square) / 20
@@ -292,22 +302,23 @@ class MyApp(QMainWindow):
                 elif self.window_level > 100:
                     self.window_level = 100
                 self.refresh()
-            
+                print(self.window_level, self.window_width)
+
             if self.drawing:
                 painter = QPainter(self.cur_maskPixmap)
                 painter.setPen(QPen(Qt.red, self.pen_size, Qt.SolidLine))
                 if self.onCtrl:
-                    painter.drawLine(self.lastPoint, event.pos())
+                    painter.drawLine(self.lastPoint, event.scenePos().toPoint())
                 elif self.onShift:
                     r = QRect(self.lastPoint, self.pen_size * QSize())
-                    r.moveCenter(event.pos())
+                    r.moveCenter(event.scenePos().toPoint())
                     painter.setCompositionMode(QPainter.CompositionMode_Clear)
                     painter.eraseRect(r)
                 # self.update()
-                self.wg.lbl_blending_img.removeItem(self.wg.lbl_blending_img.items()[0])
-                self.wg.lbl_blending_img.addPixmap(self.cur_maskPixmap)
-            
-            self.lastPoint = event.pos()
+                self.wg.scene_2.removeItem(self.wg.scene_2.items()[0])
+                self.wg.scene_2.addPixmap(self.cur_maskPixmap)
+            self.lastPoint = event.scenePos().toPoint()
+
             txt = "x={0}, y={1}, z={2}, image value={3}".format(event.x(), event.y(), self.cur_idx+1, self.cur_orginal_image[event.x(),event.y()]) 
             self.wg.lbl_pos.setText(txt)
             self.wg.lbl_pos.adjustSize()
@@ -316,16 +327,20 @@ class MyApp(QMainWindow):
 
     def mousePressEvent(self, event):
         try:
-            if event.buttons () == Qt.LeftButton | Qt.RightButton:
+            if event.buttons() == Qt.LeftButton | Qt.RightButton:
                 if self.LRClicked == False: 
                     self.LRClicked = True
-                    x = event.globalX()
-                    y = event.globalY()
+                    # x = event.globalX()
+                    # y = event.globalY()
+                    x = event.scenePos().x()
+                    y = event.scenePos().y()
                     self.LRpoint = [x, y]
                 else:
                     self.LRClicked = False
             if event.button() == Qt.LeftButton:
                 self.drawing = True
+            print(1)
+            print()
         except:
             return
 
@@ -350,10 +365,8 @@ class MyApp(QMainWindow):
             self.erasePreviousLine()
         if self.onCtrl and event.key() == Qt.Key_Plus:
             self.wg.view_2.scale(1.25, 1.25)
-            # self.wg.lbl_blending_img.scale(1.25, 1.25)
         if self.onCtrl and event.key() == Qt.Key_Minus:
             self.wg.view_2.scale(0.8, 0.8)
-            # self.wg.lbl_blending_img.scale(0.8, 0.8)
         if self.onCtrl and event.key() == Qt.Key_Asterisk:
             self.zoom = 1
             self.refresh()
@@ -397,9 +410,9 @@ class MyApp(QMainWindow):
                 self.masked_qimg = qimage2ndarray.array2qimage(self.masked_arr)
                 self.masked_pixmap = QPixmap.fromImage(QImage(self.masked_qimg))
 
-                self.wg.lbl_blending_img.addPixmap(self.masked_pixmap)
+                self.wg.scene_2.addPixmap(self.masked_pixmap)
             else:
-                self.wg.lbl_blending_img.removeItem(self.wg.lbl_blending_img.items()[0])
+                self.wg.scene_2.removeItem(self.wg.scene_2.items()[0])
         except:
             return
                 
@@ -413,11 +426,11 @@ class MyApp(QMainWindow):
 
                 blended_mask = qimage2ndarray.array2qimage(masked_arr)
                 blended_mask = QPixmap.fromImage(QImage(blended_mask))
-                self.wg.lbl_blending_img.removeItem(self.wg.lbl_blending_img.items()[0])
-                self.wg.lbl_blending_img.addPixmap(blended_mask)
+                self.wg.scene_2.removeItem(self.wg.scene_2.items()[0])
+                self.wg.scene_2.addPixmap(blended_mask)
             else:
-                self.wg.lbl_blending_img.removeItem(self.wg.lbl_blending_img.items()[0])
-                self.wg.lbl_blending_img.addPixmap(self.cur_maskPixmap)
+                self.wg.scene_2.removeItem(self.wg.scene_2.items()[0])
+                self.wg.scene_2.addPixmap(self.cur_maskPixmap)
         except:
             return
 
@@ -463,9 +476,9 @@ class MyApp(QMainWindow):
         return rgba
 
     def refreshMaskView(self):
-        self.wg.lbl_blending_img.clear()
-        self.wg.lbl_blending_img.addPixmap(QPixmap.fromImage(QImage(self.cur_image)))
-        self.wg.lbl_blending_img.addPixmap(self.cur_maskPixmap)
+        self.wg.scene_2.clear()
+        self.wg.scene_2.addPixmap(QPixmap.fromImage(QImage(self.cur_image)))
+        self.wg.scene_2.addPixmap(self.cur_maskPixmap)
 
     def setPenSize(self, text):
         self.pen_size = int(text)
