@@ -339,8 +339,6 @@ class MyApp(QMainWindow):
                     self.LRClicked = False
             if event.button() == Qt.LeftButton:
                 self.drawing = True
-            print(1)
-            print()
         except:
             return
 
