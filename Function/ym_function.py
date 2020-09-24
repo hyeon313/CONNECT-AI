@@ -21,8 +21,8 @@ class MyWidget(QWidget):
         self.scene_2 = QGraphicsScene()
         self.view_1 = QGraphicsView(self.scene_1) 
         self.view_2 = QGraphicsView(self.scene_2) 
-        self.view_1.setFixedSize(514, 514)
-        self.view_2.setFixedSize(514, 514)
+        # self.view_1.fitInView(self.scene_1)
+        # self.view_2.fitInView(self.scene_2)
 
         self.deleteCurMaskBtn = QPushButton('Delete Current Mask', self)
         self.addMaskBtn = QPushButton('&Add Mask', self)
@@ -66,15 +66,23 @@ class MyWidget(QWidget):
         self.vbox.addWidget(self.lbl_pos)
         
         self.setLayout(self.vbox)
+
+    def resizeEvent(self, event):
+        if event.oldSize().width() < 1 or event.oldSize().height() < 1:
+            return
+        self.view_1.scale(event.size().width()/event.oldSize().width(), \
+            event.size().height()/event.oldSize().height())
+        self.view_2.scale(event.size().width()/event.oldSize().width(), \
+            event.size().height()/event.oldSize().height())
+        # print(event.oldSize().width(), event.size().width())
     
 
 class MyApp(QMainWindow):
-
     def __init__(self):
         super().__init__()
         
-        self.LRpoint = [0, 0]
-        self.LRClicked = False
+        # self.LRpoint = [0, 0]
+        # self.LRClicked = False
         self.window_level = 40
         self.window_width = 400
         self.deltaWL = 0
@@ -90,7 +98,8 @@ class MyApp(QMainWindow):
         self.EntireImage = [] 
         self.adjustedImage = []
         
-        self.drawing = False
+        self.Lclicked = False
+        self.Rclicked = False
         self.lastPoint = QPoint()
         self.mask_arrList = []
         self.mask_imgList = []
@@ -225,6 +234,9 @@ class MyApp(QMainWindow):
                 [qimage2ndarray.byte_view(self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()])]
 
             self.wg.scene_2.addPixmap(self.cur_maskPixmap)
+
+            # self.wg.view_2.scale(self.wg.view_2.width()/self.Nx, self.wg.view_2.height()/self.Ny)
+            # print(self.wg.view_2.width(), self.wg.view_2.height())
         except:
             return
         
@@ -269,9 +281,12 @@ class MyApp(QMainWindow):
 
     def mouseMoveEvent(self, event): ##
         try:
-            if self.LRClicked:
-                rX = np.array(self.LRpoint[0])
-                rY = np.array(self.LRpoint[1])
+            # if self.LRClicked:
+            if self.Lclicked and self.Rclicked:
+                # rX = np.array(self.LRpoint[0])
+                # rY = np.array(self.LRpoint[1])
+                rX = self.lastPoint.x()
+                rY = self.lastPoint.y()
                 
                 # mX = event.globalX()
                 # mY = event.globalY()
@@ -279,32 +294,24 @@ class MyApp(QMainWindow):
                 mY = event.scenePos().y()
 
                 square = (rX - mX)*(rX - mX) + (rY - mY)*(rY - mY)
-                dist = math.sqrt(square) / 20
+                dist = math.sqrt(square) / 5
 
-                if rX < mX:
-                    self.deltaWL  = dist                
-                else:
-                    self.deltaWL  = -dist
-                if rY < mY:
-                    self.deltaWW = -dist
-                else:
-                    self.deltaWW = dist
+                if rX < mX: self.deltaWL  = dist                
+                else: self.deltaWL  = -dist
+                if rY < mY: self.deltaWW = -dist
+                else: self.deltaWW = dist
                 self.window_level = self.window_level + self.deltaWL
                 self.window_width = self.window_width + self.deltaWW
 
-                if self.window_width <= 0:
-                    self.window_width = 0
-                elif self.window_width > 900:
-                    self.window_width = 900
+                if self.window_width <= 0: self.window_width = 0
+                elif self.window_width > 900: self.window_width = 900
 
-                if self.window_level < -250:
-                    self.window_level = -250
-                elif self.window_level > 100:
-                    self.window_level = 100
+                if self.window_level < -250: self.window_level = -250
+                elif self.window_level > 100: self.window_level = 100
                 self.refresh()
-                print(self.window_level, self.window_width)
+                # print(self.window_level, self.window_width)
 
-            if self.drawing:
+            if self.Lclicked:
                 painter = QPainter(self.cur_maskPixmap)
                 painter.setPen(QPen(Qt.red, self.pen_size, Qt.SolidLine))
                 if self.onCtrl:
@@ -317,40 +324,46 @@ class MyApp(QMainWindow):
                 # self.update()
                 self.wg.scene_2.removeItem(self.wg.scene_2.items()[0])
                 self.wg.scene_2.addPixmap(self.cur_maskPixmap)
+            
             self.lastPoint = event.scenePos().toPoint()
 
-            txt = "x={0}, y={1}, z={2}, image value={3}".format(event.x(), event.y(), self.cur_idx+1, self.cur_orginal_image[event.x(),event.y()]) 
-            self.wg.lbl_pos.setText(txt)
-            self.wg.lbl_pos.adjustSize()
+            # txt = "x={0}, y={1}, z={2}, image value={3}".format(event.scenePos().x(), event.scenePos().y(), self.cur_idx+1, self.cur_orginal_image[event.scenePos().x(), event.scenePos().y()])
+            txt = "x={0}, y={1}, z={2}, image value={3}".format(self.lastPoint.x(), self.lastPoint.y(), self.cur_idx+1, self.cur_orginal_image[self.lastPoint.x(), self.lastPoint.y()]) 
+            self.wg.lbl_pos.setText(txt).adjustSize()
+            # self.wg.lbl_pos.adjustSize()
         except:
             return
 
     def mousePressEvent(self, event):
         try:
-            if event.buttons() == Qt.LeftButton | Qt.RightButton:
-                if self.LRClicked == False: 
-                    self.LRClicked = True
-                    # x = event.globalX()
-                    # y = event.globalY()
-                    x = event.scenePos().x()
-                    y = event.scenePos().y()
-                    self.LRpoint = [x, y]
-                else:
-                    self.LRClicked = False
+            # if event.buttons() == Qt.LeftButton | Qt.RightButton:
+            #     if self.LRClicked == False: 
+            #         self.LRClicked = True
+            #         # x = event.globalX()
+            #         # y = event.globalY()
+            #         x = event.scenePos().x()
+            #         y = event.scenePos().y()
+            #         self.LRpoint = [x, y]
+            #     else:
+            #         self.LRClicked = False
             if event.button() == Qt.LeftButton:
-                self.drawing = True
+                self.Lclicked = True
+            if event.button() == Qt.RightButton:
+                self.Rclicked = True
         except:
             return
 
     def mouseReleaseEvent(self, event):
         try:
             if event.button() == Qt.LeftButton:
-                if self.drawing:
+                if self.Lclicked:
                     self.mask_imgList[self.cur_idx][self.wg.maskComboBox.currentIndex()] = \
                         self.cur_maskPixmap.toImage()
                     self.drawn_imgList.append(qimage2ndarray.byte_view(self.cur_maskPixmap.toImage())) ##
                     self.refreshMaskView()
-                self.drawing = False
+                self.Lclicked = False
+            if event.button() == Qt.RightButton:
+                self.Rclicked = False
         except:
             return
 
