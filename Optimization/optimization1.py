@@ -143,13 +143,7 @@ class MyApp(QMainWindow):
         self.wg.dialogBtn.clicked.connect(self.showDialog)
         self.wg.previousBtn.clicked.connect(self.previousBtn_clicked)
         self.wg.nextBtn.clicked.connect(self.nextBtn_clicked)
-
-        # self.wg.view_1.mouseMoveEvent = self.mouseMoveEvent
-        # self.wg.view_1.mousePressEvent = self.mousePressEvent
-        # self.wg.view_1.mouseReleaseEvent = self.mouseReleaseEvent
-        # self.wg.view_2.mouseMoveEvent = self.mouseMoveEvent
-        # self.wg.view_2.mousePressEvent = self.mousePressEvent
-        # self.wg.view_2.mouseReleaseEvent = self.mouseReleaseEvent
+        
         self.wg.view_1.setMouseTracking(True)
         self.wg.view_2.setMouseTracking(True)
 
@@ -203,7 +197,7 @@ class MyApp(QMainWindow):
             self.cur_idx = self.NofI-224
         self.refresh()
 
-    def refresh(self): ##
+    def refresh(self):
         try:
             self.wg.maskComboBox.clear()
             for i in range(len(self.mask_imgList[self.cur_idx])):
