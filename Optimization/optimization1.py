@@ -1,3 +1,8 @@
+'''
+zoom 후 그리기 완료
+창 크기에 맞춰서 이미지 띄우기
+level, width 마우스로 설정안됨
+'''
 import sys
 import os ##
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QWidget, QHBoxLayout,\
