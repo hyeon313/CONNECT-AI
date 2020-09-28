@@ -27,3 +27,11 @@ ctrl + z(mouse release 시) 기능 개선
 
 ~9.19
 자잘한 문제 개선
+
+~9.28
+zoom 기능시 그리기 기능 개선
+width & level 마우스 조절 기능 변경
+윈도우창 resize이벤트 추가
+save기능 추가(save방식 개선)
+불러들인 파일 정렬 시킴(natsort)
+load기능 추가
