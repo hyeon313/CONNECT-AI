@@ -35,3 +35,16 @@ width & level 마우스 조절 기능 변경
 save기능 추가(save방식 개선)
 불러들인 파일 정렬 시킴(natsort)
 load기능 추가
+
+~10.6
+save, load 기능 재개선
+  * label to qimage, qimage to label 추가
+  * label to qimage, qimage to label 이용한 save, load
+raw, bin 불러오기 추가
+  * 기존 IMA의 불러오기와 독립된 방식
+그외 전편적인 개선
+  * QImage List 삭제
+  * mask all save 
+  * 에러 감지를 위해 except에 return이 아닌 print 배치
+  * mouse move event오류 개선
+  * 그외 에러 감지를 위한 몇몇의 if문 배치
