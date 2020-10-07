@@ -23,7 +23,7 @@ class MyWidget(QWidget):
         self.view_1 = QGraphicsView(self.scene_1) 
         self.view_2 = QGraphicsView(self.scene_2)
 
-        self.deleteCurMaskBtn = QPushButton('Delete Current Mask', self)
+        self.deleteCurMaskBtn = QPushButton('Delete Mask(Not exist)', self)
         self.addMaskBtn = QPushButton('&Add Mask', self)
         self.maskComboBox = QComboBox(self)
         self.maskCheckBox = QCheckBox('Masking', self)
@@ -164,7 +164,7 @@ class MyApp(QMainWindow):
         self.wg.scene_2.mousePressEvent = self.mousePressEvent
         self.wg.scene_2.mouseReleaseEvent = self.mouseReleaseEvent
 
-        self.setWindowTitle('Test Image')
+        self.setWindowTitle('Image Labeling')
         self.setGeometry(300, 300, 1100, 600)
         self.show()
     
@@ -251,9 +251,9 @@ class MyApp(QMainWindow):
             mask = self.label2image(self.mask_arrList[self.cur_idx][self.wg.maskComboBox.currentIndex()])
             self.cur_maskPixmap = QPixmap.fromImage(QImage(mask))
             self.drawn_arrList = [qimage2ndarray.byte_view(mask)]
-
             self.wg.scene_2.addPixmap(self.cur_maskPixmap)
-
+            
+            self.wg.deleteCurMaskBtn.setText('Delete Mask {}'.format(self.wg.maskComboBox.currentIndex()+1))
             if self.wg.maskCheckBox.isChecked(): self.wg.maskCheckBox.toggle()
             if self.wg.blendCheckBox.isChecked(): self.wg.blendCheckBox.toggle()
         except:
@@ -455,7 +455,8 @@ class MyApp(QMainWindow):
 
     def addMask(self):
         try:
-            self.mask_arrList[self.cur_idx].append(np.zeros((self.Nx, self.Ny)))
+            for i in range(self.NofI):
+                self.mask_arrList[i].append(np.zeros((self.Nx, self.Ny)))
             self.wg.maskComboBox.addItem('Mask' + str(len(self.mask_arrList[self.cur_idx])))
             self.maskComboBoxActivated(len(self.mask_arrList[self.cur_idx])-1)
             self.wg.maskComboBox.setCurrentIndex(len(self.mask_arrList[self.cur_idx])-1)
@@ -465,7 +466,8 @@ class MyApp(QMainWindow):
     def deleteMask(self): 
         try:
             if len(self.mask_arrList[self.cur_idx]) > 1:
-                del self.mask_arrList[self.cur_idx][self.wg.maskComboBox.currentIndex()]
+                for i in range(self.NofI):
+                    del self.mask_arrList[i][self.wg.maskComboBox.currentIndex()]
                 self.wg.maskComboBox.removeItem(self.wg.maskComboBox.currentIndex())
                 cur_mask_index = self.wg.maskComboBox.currentIndex()
                 self.wg.maskComboBox.clear()
@@ -473,6 +475,8 @@ class MyApp(QMainWindow):
                     self.wg.maskComboBox.addItem('Mask' + str(i + 1))
                 self.maskComboBoxActivated(cur_mask_index)
                 self.wg.maskComboBox.setCurrentIndex(cur_mask_index)
+            else:
+                return
         except:
             print('deleteMask Error')
 
@@ -480,6 +484,7 @@ class MyApp(QMainWindow):
         mask = self.label2image(self.mask_arrList[self.cur_idx][index])
         self.cur_maskPixmap = QPixmap.fromImage(QImage(mask))
         self.drawn_arrList = [qimage2ndarray.byte_view(mask)]
+        self.wg.deleteCurMaskBtn.setText('Delete Mask {}'.format(index+1))
         self.refreshMaskView()
         if self.wg.maskCheckBox.isChecked(): self.wg.maskCheckBox.toggle()
         if self.wg.blendCheckBox.isChecked(): self.wg.blendCheckBox.toggle()
@@ -515,11 +520,14 @@ class MyApp(QMainWindow):
     def saveCurrentMasks(self):
         try:
             save_dir = QFileDialog.getExistingDirectory(self, "Save Current Masks")
-            save_new_dir = save_dir + '/' + self.file_names[self.cur_idx]
+            save_new_dir = save_dir + '/Voxel_{}'.format(self.cur_idx+1)
             os.makedirs(save_new_dir, exist_ok=True)
             for i in range(len(self.mask_arrList[self.cur_idx])):
-                np.save(save_new_dir + '/' + self.file_names[self.cur_idx] + '_mask_{}.npy'.format(i + 1), \
+                np.save(save_new_dir + '/Voxel_{}_mask_{}.npy'.format(self.cur_idx+1, i+1), \
                     self.mask_arrList[self.cur_idx][i])
+            
+            done = QMessageBox.information(self, 'Save Current Masks', "Masks is saved.", \
+                QMessageBox.Ok, QMessageBox.Ok)
         except:
             print('saveCurrentMasks Error')
 
@@ -527,13 +535,13 @@ class MyApp(QMainWindow):
         try:
             save_dir = QFileDialog.getExistingDirectory(self, "Save All Masks")
             
-            save_new_dir = save_dir + '/' + self.file_names[0][:4] + '_Mask_npy'
+            save_new_dir = save_dir + '/Masks_npy'
             os.makedirs(save_new_dir, exist_ok=True)
             for i in range(len(self.mask_arrList)):
-                temp_dir = save_new_dir + '/' + self.file_names[i]
+                temp_dir = save_new_dir + '/Voxel_{}'.format(i+1) 
                 os.makedirs(temp_dir, exist_ok=True)
                 for j in range(len(self.mask_arrList[i])):
-                    np.save(temp_dir + '/' + self.file_names[i] + '_mask_{}.npy'.format(j + 1), \
+                    np.save(temp_dir + '/Voxel_{}_mask_{}.npy'.format(i+1, j+1), \
                         self.mask_arrList[i][j])
             
             done = QMessageBox.information(self, 'Save All Masks', "All masks is saved.", \
