@@ -103,7 +103,7 @@ class MyApp(QMainWindow):
         self.onCtrl = False
         self.onShift = False
         self.pen_size = 10
-        self.file_names = []
+        self.py_raw = voxel.PyVoxel()
 
         self.wg = MyWidget() 
         self.setCentralWidget(self.wg)
@@ -116,14 +116,14 @@ class MyApp(QMainWindow):
         openIMA.triggered.connect(self.openImageIMA)
         exitAction = QAction('Quit', self)
         exitAction.triggered.connect(qApp.quit)
-        saveAction = QAction('Save Current Masks', self)
-        saveAction.triggered.connect(self.saveCurrentMasks)
-        saveallAction = QAction('Save all Masks', self)
-        saveallAction.triggered.connect(self.saveAllMasks)
-        loadallAction = QAction('Load all Masks', self)
-        loadallAction.triggered.connect(self.loadAllMasks)
-        loadBinFile = QAction('Load Masks From Bin File', self)
-        loadBinFile.triggered.connect(self.loadBinMasks)
+        saveNpyAction = QAction('Save Masks As Npy', self)
+        saveNpyAction.triggered.connect(self.saveMasksAsNpy)
+        saveBinAction = QAction('Save Masks As Bin', self)
+        saveBinAction.triggered.connect(self.saveMasksAsBin)
+        loadNpyAction = QAction('Load Masks From Npy', self)
+        loadNpyAction.triggered.connect(self.loadMasksNpy)
+        loadBinAction = QAction('Load Masks From Bin', self)
+        loadBinAction.triggered.connect(self.loadBinMasks)
         adjustAction = QAction('Adjust', self)
         adjustAction.triggered.connect(self.adjustImage)
 
@@ -134,10 +134,10 @@ class MyApp(QMainWindow):
         filemenu = menubar.addMenu('&File')
         filemenu.addAction(openRaw)
         filemenu.addAction(openIMA)
-        filemenu.addAction(saveAction)
-        filemenu.addAction(saveallAction)
-        filemenu.addAction(loadallAction)
-        filemenu.addAction(loadBinFile)
+        filemenu.addAction(saveNpyAction)
+        filemenu.addAction(saveBinAction)
+        filemenu.addAction(loadNpyAction)
+        filemenu.addAction(loadBinAction)
         filemenu.addAction(exitAction)
         filemenu = menubar.addMenu('&Image')
         filemenu.addAction(adjustAction)
@@ -171,19 +171,19 @@ class MyApp(QMainWindow):
     def openImageRaw(self):
         try:
             # Rad for .raw file
-            self.fname = QFileDialog.getOpenFileName(self, "Select File")[0]
-            py_raw = voxel.PyVoxel()
-            py_raw.ReadFromRaw(self.fname)
-            ImgArray = py_raw.m_Voxel
-            
+            fname = QFileDialog.getOpenFileName(self, "Select File")[0]
+            # self.py_raw = voxel.PyVoxel()
+            self.py_raw.ReadFromRaw(fname)
+            ImgArray = self.py_raw.m_Voxel
+
             self.EntireImage = np.asarray(ImgArray, dtype=np.float32) 
             self.EntireImage = np.squeeze(self.EntireImage)
             self.NofI = self.EntireImage.shape[0]  
             self.Nx = self.EntireImage.shape[1] 
             self.Ny = self.EntireImage.shape[2] 
-            self.mask_arrList = [[np.zeros((self.Nx, self.Ny))] for _ in range(self.NofI)]
-            self.is_opened = True
+            self.mask_arrList = np.zeros((1, self.NofI, self.Nx, self.Ny))
             self.refresh()
+            self.is_opened = True
         except:
             print('openImageRaw Error')
 
@@ -194,8 +194,6 @@ class MyApp(QMainWindow):
             reader = itk.ImageSeriesReader() 
             dicom_names = reader.GetGDCMSeriesFileNames(self.folder_path)
             dicom_names = natsort.natsorted(dicom_names)
-            for i in range(len(dicom_names)):
-                self.file_names.append(dicom_names[i].replace(self.folder_path + '/', '').replace('.IMA', ''))
             reader.SetFileNames(dicom_names)
             images = reader.Execute()
             ImgArray = itk.GetArrayFromImage(images)
@@ -205,9 +203,9 @@ class MyApp(QMainWindow):
             self.NofI = self.EntireImage.shape[0]  
             self.Nx = self.EntireImage.shape[1] 
             self.Ny = self.EntireImage.shape[2] 
-            self.mask_arrList = [[np.zeros((self.Nx, self.Ny))] for _ in range(self.NofI)]
-            self.is_opened = True
+            self.mask_arrList = np.zeros((1, self.NofI, self.Nx, self.Ny))
             self.refresh()
+            self.is_opened = True
         except:
             print('openImageIMA Error')
 
@@ -230,11 +228,11 @@ class MyApp(QMainWindow):
 
     def refresh(self): 
         try:
+            cur_mask_index = self.wg.maskComboBox.currentIndex()
             self.wg.maskComboBox.clear()
-            for i in range(len(self.mask_arrList[self.cur_idx])):
+            for i in range(self.mask_arrList.shape[0]):
                 self.wg.maskComboBox.addItem('Mask' + str(i + 1))
-            if self.wg.maskCheckBox.isChecked(): self.wg.maskCheckBox.toggle()
-            if self.wg.blendCheckBox.isChecked(): self.wg.blendCheckBox.toggle()
+            if cur_mask_index >= 0: self.wg.maskComboBox.setCurrentIndex(cur_mask_index)
 
             self.cur_orginal_image = self.EntireImage[self.cur_idx]
             self.cur_img_arr = self.AdjustPixelRange(self.cur_orginal_image, self.window_level, self.window_width)
@@ -248,7 +246,7 @@ class MyApp(QMainWindow):
             self.wg.view_1.setScene(self.wg.scene_1)
             self.wg.view_2.setScene(self.wg.scene_2)
 
-            mask = self.label2image(self.mask_arrList[self.cur_idx][self.wg.maskComboBox.currentIndex()])
+            mask = self.label2image(self.mask_arrList[self.wg.maskComboBox.currentIndex(), self.cur_idx])
             self.cur_maskPixmap = QPixmap.fromImage(QImage(mask))
             self.drawn_arrList = [qimage2ndarray.byte_view(mask)]
             self.wg.scene_2.addPixmap(self.cur_maskPixmap)
@@ -261,19 +259,21 @@ class MyApp(QMainWindow):
         
     def previousBtn_clicked(self):
         try:
-            self.cur_idx = self.cur_idx - 1
-            if self.cur_idx < 0: 
-                self.cur_idx = 0
-            self.refresh()
+            if self.is_opened:
+                self.cur_idx = self.cur_idx - 1
+                if self.cur_idx < 0: 
+                    self.cur_idx = 0
+                self.refresh()
         except:
             print('previousBtn_clicked Error')
 
     def nextBtn_clicked(self):
         try:
-            self.cur_idx = self.cur_idx + 1
-            if self.cur_idx > self.NofI-1:
-                self.cur_idx = self.NofI-1
-            self.refresh()
+            if self.is_opened:
+                self.cur_idx = self.cur_idx + 1
+                if self.cur_idx > self.NofI-1:
+                    self.cur_idx = self.NofI-1
+                self.refresh()
         except:
             print('nextBtn_clicked Error')
 
@@ -287,14 +287,15 @@ class MyApp(QMainWindow):
 
     def wheelEvent(self, event):
         try:
-            n_scroll = int(event.angleDelta().y() / 120)
-            
-            self.cur_idx = self.cur_idx + n_scroll
-            if self.cur_idx < 0:
-                self.cur_idx = 0
-            if self.cur_idx > self.NofI-1:
-                self.cur_idx = self.NofI-1
-            self.refresh() 
+            if self.is_opened:
+                n_scroll = int(event.angleDelta().y() / 120)
+                
+                self.cur_idx = self.cur_idx + n_scroll
+                if self.cur_idx < 0:
+                    self.cur_idx = 0
+                if self.cur_idx > self.NofI-1:
+                    self.cur_idx = self.NofI-1
+                self.refresh() 
         except:
             print('wheelEvent Error')
 
@@ -365,7 +366,7 @@ class MyApp(QMainWindow):
         try:
             if event.button() == Qt.LeftButton:
                 if self.Lclicked:
-                    self.mask_arrList[self.cur_idx][self.wg.maskComboBox.currentIndex()] = \
+                    self.mask_arrList[self.wg.maskComboBox.currentIndex(), self.cur_idx] = \
                         self.image2label(self.cur_maskPixmap.toImage())
                     self.drawn_imgList.append(qimage2ndarray.byte_view(self.cur_maskPixmap.toImage()))
                     self.refreshMaskView()
@@ -402,7 +403,7 @@ class MyApp(QMainWindow):
             del self.drawn_arrList[len(self.drawn_arrList)-1]
             temp = self.bgra2rgba(self.drawn_arrList[len(self.drawn_arrList)-1])
             self.cur_maskPixmap = QPixmap.fromImage(QImage(qimage2ndarray.array2qimage(temp)))
-            self.mask_arrList[self.cur_idx][self.wg.maskComboBox.currentIndex()] = \
+            self.mask_arrList[self.wg.maskComboBox.currentIndex(), self.cur_idx] = \
                 self.image2label(self.cur_maskPixmap.toImage())
             self.refreshMaskView()
 
@@ -410,7 +411,7 @@ class MyApp(QMainWindow):
         try:
             if Qt.Checked == state:
                 origin_qimg = self.cur_image
-                masked_qimg = self.label2image(self.mask_arrList[self.cur_idx][self.wg.maskComboBox.currentIndex()])
+                masked_qimg = self.label2image(self.mask_arrList[self.wg.maskComboBox.currentIndex(), self.cur_idx])
                 
                 origin_arr = qimage2ndarray.rgb_view(origin_qimg)
                 masked_alpha_arr = qimage2ndarray.alpha_view(masked_qimg)
@@ -422,8 +423,6 @@ class MyApp(QMainWindow):
                     for j in range(self.Ny):
                         if masked_alpha_arr[i, j] != 0:
                             temp[i, j] = origin_arr[i, j]
-                            self.mask_arrList[self.cur_idx][self.wg.maskComboBox.currentIndex()][i, j] = \
-                                self.wg.maskComboBox.currentIndex() + 1
                 
                 self.masked_arr = temp
                 self.masked_qimg = qimage2ndarray.array2qimage(self.masked_arr)
@@ -438,7 +437,7 @@ class MyApp(QMainWindow):
     def onBlendedMask(self, state):
         try:
             if Qt.Checked == state:
-                masked_qimg = self.label2image(self.mask_arrList[self.cur_idx][self.wg.maskComboBox.currentIndex()])
+                masked_qimg = self.label2image(self.mask_arrList[self.wg.maskComboBox.currentIndex(), self.cur_idx])
                 masked_arr = self.bgra2rgba(qimage2ndarray.byte_view(masked_qimg))
                 masked_alpha_arr = masked_arr[:, :, 3].copy()
                 masked_arr[:, :, 3] = masked_alpha_arr * 0.5
@@ -455,23 +454,23 @@ class MyApp(QMainWindow):
 
     def addMask(self):
         try:
-            for i in range(self.NofI):
-                self.mask_arrList[i].append(np.zeros((self.Nx, self.Ny)))
-            self.wg.maskComboBox.addItem('Mask' + str(len(self.mask_arrList[self.cur_idx])))
-            self.maskComboBoxActivated(len(self.mask_arrList[self.cur_idx])-1)
-            self.wg.maskComboBox.setCurrentIndex(len(self.mask_arrList[self.cur_idx])-1)
+            self.mask_arrList = np.concatenate((self.mask_arrList, np.zeros((1, self.NofI, self.Nx, self.Ny))), axis=0)
+            print(self.mask_arrList.shape)
+            self.wg.maskComboBox.addItem('Mask' + str(self.mask_arrList.shape[0]))
+            self.maskComboBoxActivated(self.mask_arrList.shape[0]-1)
+            self.wg.maskComboBox.setCurrentIndex(self.mask_arrList.shape[0]-1)
         except:
             print('addMask Error')
 
     def deleteMask(self): 
         try:
-            if len(self.mask_arrList[self.cur_idx]) > 1:
-                for i in range(self.NofI):
-                    del self.mask_arrList[i][self.wg.maskComboBox.currentIndex()]
+            if self.mask_arrList.shape[0] > 1:
+                self.mask_arrList = np.delete(self.mask_arrList, self.wg.maskComboBox.currentIndex(), axis=0)
+                print(self.mask_arrList.shape)
                 self.wg.maskComboBox.removeItem(self.wg.maskComboBox.currentIndex())
                 cur_mask_index = self.wg.maskComboBox.currentIndex()
                 self.wg.maskComboBox.clear()
-                for i in range(len(self.mask_arrList[self.cur_idx])):
+                for i in range(self.mask_arrList.shape[0]):
                     self.wg.maskComboBox.addItem('Mask' + str(i + 1))
                 self.maskComboBoxActivated(cur_mask_index)
                 self.wg.maskComboBox.setCurrentIndex(cur_mask_index)
@@ -481,13 +480,11 @@ class MyApp(QMainWindow):
             print('deleteMask Error')
 
     def maskComboBoxActivated(self, index):
-        mask = self.label2image(self.mask_arrList[self.cur_idx][index])
+        mask = self.label2image(self.mask_arrList[index, self.cur_idx])
         self.cur_maskPixmap = QPixmap.fromImage(QImage(mask))
         self.drawn_arrList = [qimage2ndarray.byte_view(mask)]
         self.wg.deleteCurMaskBtn.setText('Delete Mask {}'.format(index+1))
         self.refreshMaskView()
-        if self.wg.maskCheckBox.isChecked(): self.wg.maskCheckBox.toggle()
-        if self.wg.blendCheckBox.isChecked(): self.wg.blendCheckBox.toggle()
 
     def rgb2gray(self, rgb):
         return np.dot(rgb[...,:3], [0.2989, 0.5870, 0.1140])
@@ -513,78 +510,66 @@ class MyApp(QMainWindow):
         self.wg.scene_2.clear()
         self.wg.scene_2.addPixmap(QPixmap.fromImage(QImage(self.cur_image)))
         self.wg.scene_2.addPixmap(self.cur_maskPixmap)
+        if self.wg.maskCheckBox.isChecked(): self.wg.maskCheckBox.toggle()
+        if self.wg.blendCheckBox.isChecked(): self.wg.blendCheckBox.toggle()
 
     def setPenSize(self, text):
         self.pen_size = int(text)
 
-    def saveCurrentMasks(self):
+    def saveMasksAsNpy(self):
         try:
-            save_dir = QFileDialog.getExistingDirectory(self, "Save Current Masks")
-            save_new_dir = save_dir + '/Voxel_{}'.format(self.cur_idx+1)
-            os.makedirs(save_new_dir, exist_ok=True)
-            for i in range(len(self.mask_arrList[self.cur_idx])):
-                np.save(save_new_dir + '/Voxel_{}_mask_{}.npy'.format(self.cur_idx+1, i+1), \
-                    self.mask_arrList[self.cur_idx][i])
-            
-            done = QMessageBox.information(self, 'Save Current Masks', "Masks is saved.", \
-                QMessageBox.Ok, QMessageBox.Ok)
+            save_fname = QFileDialog.getSaveFileName(self, "Save Masks as npy", './untitled.npy')[0]
+            if len(save_fname) < 1: 
+                return
+            if '.npy' not in save_fname:
+                save_fname = save_fname + '.npy'
+
+            for i in range(self.mask_arrList.shape[0]):
+                print(save_fname[:-4] + '_{}'.format(i+1) + save_fname[-4:])
+                np.save(save_fname[:-4] + '_{}'.format(i+1) + save_fname[-4:], self.mask_arrList[i])
+
+            QMessageBox.information(self, 'Save All Masks', "All masks is saved.", \
+                    QMessageBox.Ok, QMessageBox.Ok)
         except:
-            print('saveCurrentMasks Error')
+            print('saveMasksAsNpy Error')
 
-    def saveAllMasks(self):
+    def saveMasksAsBin(self):
         try:
-            save_dir = QFileDialog.getExistingDirectory(self, "Save All Masks")
-            
-            save_new_dir = save_dir + '/Masks_npy'
-            os.makedirs(save_new_dir, exist_ok=True)
-            for i in range(len(self.mask_arrList)):
-                temp_dir = save_new_dir + '/Voxel_{}'.format(i+1) 
-                os.makedirs(temp_dir, exist_ok=True)
-                for j in range(len(self.mask_arrList[i])):
-                    np.save(temp_dir + '/Voxel_{}_mask_{}.npy'.format(i+1, j+1), \
-                        self.mask_arrList[i][j])
-            
-            done = QMessageBox.information(self, 'Save All Masks', "All masks is saved.", \
-                QMessageBox.Ok, QMessageBox.Ok)
+            save_fname = QFileDialog.getSaveFileName(self, "Save Masks as bin", './untitled.bin')[0]
+            if len(save_fname) < 1: 
+                return
+            if '.bin' not in save_fname:
+                save_fname = save_fname + '.bin'
+
+            for i in range(self.mask_arrList.shape[0]):
+                fname = save_fname[:-4] + '_{}'.format(i+1) + save_fname[-4:]
+                self.py_raw.m_Voxel = self.mask_arrList[i]
+                self.py_raw.WriteToBin(fname)
+                # self.py_raw.SaveWithoutHeader(fname)
+
+            QMessageBox.information(self, 'Save All Masks', "All masks is saved.", \
+                    QMessageBox.Ok, QMessageBox.Ok)
         except:
-            print('saveAllMasks Error')
+            print('saveMasksAsBin Error')
 
-    def loadAllMasks(self):
+    def loadMasksNpy(self):
         try:
-            load_dir = QFileDialog.getExistingDirectory(self, "Load All Masks")
-            dir_list = os.listdir(load_dir)
-            mask_arr_list = natsort.natsorted(dir_list)
-            load_arr_list = []
-            
-            for i in range(len(mask_arr_list)):
-                temp_dir = load_dir + '/' + mask_arr_list[i]
-                temp_dir_list = os.listdir(temp_dir)
-                temp_dir_list = natsort.natsorted(temp_dir_list)
-                temp = []
-                for j in range(len(temp_dir_list)):
-                    temp_file_dir = temp_dir + '/' + temp_dir_list[j]
-                    temp.append(np.load(temp_file_dir))
-                load_arr_list.append(temp)
-
-            self.mask_arrList = load_arr_list
+            load_fname = QFileDialog.getOpenFileName(self, 'Load Masks From Npy File')[0]
+            self.mask_arrList = np.load(load_fname)
+            self.mask_arrList = np.expand_dims(self.mask_arrList, axis=0)
             self.refresh()
         except:
-            print('loadAllMasks Error')
+            print('loadMasksNpy Error')
 
     def loadBinMasks(self):
         try:
             fname = QFileDialog.getOpenFileName(self, 'Load Masks From Bin File')[0]
-            py_raw = voxel.PyVoxel()
-            py_raw.ReadFromBin(fname)
+            # self.py_raw = voxel.PyVoxel()
+            self.py_raw.ReadFromBin(fname)
 
-            load_arr_list = []
-
-            if self.NofI == py_raw.m_Voxel.shape[0]:
-                labels = py_raw.m_Voxel.copy()
-                for i in range(labels.shape[0]):
-                    load_arr_list.append([labels[i]])
-
-                self.mask_arrList = load_arr_list
+            if self.NofI == self.py_raw.m_Voxel.shape[0]:
+                self.mask_arrList = self.py_raw.m_Voxel.copy()
+                self.mask_arrList = np.expand_dims(self.mask_arrList, axis=0)
                 self.refresh()
             else:
                 print('loadBinMasks Error : Mask volume and Image volume are different.')
