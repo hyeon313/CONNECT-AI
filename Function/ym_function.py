@@ -248,7 +248,7 @@ class MyApp(QMainWindow):
 
             mask = self.label2image(self.mask_arrList[self.wg.maskComboBox.currentIndex(), self.cur_idx])
             self.cur_maskPixmap = QPixmap.fromImage(QImage(mask))
-            self.drawn_arrList = [qimage2ndarray.byte_view(mask)]
+            self.drawn_imgList = [mask]
             self.wg.scene_2.addPixmap(self.cur_maskPixmap)
             
             self.wg.deleteCurMaskBtn.setText('Delete Mask {}'.format(self.wg.maskComboBox.currentIndex()+1))
@@ -368,7 +368,7 @@ class MyApp(QMainWindow):
                 if self.Lclicked:
                     self.mask_arrList[self.wg.maskComboBox.currentIndex(), self.cur_idx] = \
                         self.image2label(self.cur_maskPixmap.toImage())
-                    self.drawn_imgList.append(qimage2ndarray.byte_view(self.cur_maskPixmap.toImage()))
+                    self.drawn_imgList.append(self.cur_maskPixmap.toImage())
                     self.refreshMaskView()
                 self.Lclicked = False
             if event.button() == Qt.RightButton:
@@ -399,10 +399,9 @@ class MyApp(QMainWindow):
             self.onShift = False
         
     def erasePreviousLine(self):
-        if len(self.drawn_arrList) > 1:
-            del self.drawn_arrList[len(self.drawn_arrList)-1]
-            temp = self.bgra2rgba(self.drawn_arrList[len(self.drawn_arrList)-1])
-            self.cur_maskPixmap = QPixmap.fromImage(QImage(qimage2ndarray.array2qimage(temp)))
+        if len(self.drawn_imgList) > 1:
+            del self.drawn_imgList[len(self.drawn_imgList)-1]
+            self.cur_maskPixmap = QPixmap.fromImage(QImage(self.drawn_imgList[len(self.drawn_imgList)-1]))
             self.mask_arrList[self.wg.maskComboBox.currentIndex(), self.cur_idx] = \
                 self.image2label(self.cur_maskPixmap.toImage())
             self.refreshMaskView()
@@ -482,7 +481,7 @@ class MyApp(QMainWindow):
     def maskComboBoxActivated(self, index):
         mask = self.label2image(self.mask_arrList[index, self.cur_idx])
         self.cur_maskPixmap = QPixmap.fromImage(QImage(mask))
-        self.drawn_arrList = [qimage2ndarray.byte_view(mask)]
+        self.drawn_imgList = [mask]
         self.wg.deleteCurMaskBtn.setText('Delete Mask {}'.format(index+1))
         self.refreshMaskView()
 
@@ -514,7 +513,10 @@ class MyApp(QMainWindow):
         if self.wg.blendCheckBox.isChecked(): self.wg.blendCheckBox.toggle()
 
     def setPenSize(self, text):
-        self.pen_size = int(text)
+        try:
+            self.pen_size = int(text)
+        except:
+            return
 
     def saveMasksAsNpy(self):
         try:
@@ -577,7 +579,6 @@ class MyApp(QMainWindow):
             print('loadBinMasks Error')
         
         
-
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     ex = MyApp()
