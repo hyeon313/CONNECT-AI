@@ -388,10 +388,9 @@ class MyApp(QMainWindow):
             self.onShift = False
         
     def erasePreviousLine(self):
-        if len(self.drawn_arrList) > 1:
-            del self.drawn_arrList[len(self.drawn_arrList)-1]
-            temp = self.bgra2rgba(self.drawn_arrList[len(self.drawn_arrList)-1])
-            self.cur_maskPixmap = QPixmap.fromImage(QImage(qimage2ndarray.array2qimage(temp)))
+        if len(self.drawn_imgList) > 1:
+            del self.drawn_imgList[len(self.drawn_imgList)-1]
+            self.cur_maskPixmap = QPixmap.fromImage(QImage(self.drawn_imgList[len(self.drawn_imgList)-1]))
             self.mask_arrList[self.wg.maskComboBox.currentIndex(), self.cur_idx] = \
                 self.image2label(self.cur_maskPixmap.toImage())
             self.refreshMaskView()
