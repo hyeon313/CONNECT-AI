@@ -2,7 +2,7 @@ import sys
 import os 
 from PyQt5.QtWidgets import (QApplication, QLabel, QMainWindow, QWidget, QHBoxLayout,\
     QVBoxLayout, QAction, QFileDialog, QGraphicsView, QGraphicsScene, QCheckBox, QComboBox, QPushButton,\
-         QInputDialog, qApp, QLineEdit, QMessageBox)
+         QInputDialog, qApp, QLineEdit, QMessageBox, QRadioButton)
 from PyQt5.QtGui import QPixmap, QIcon, QImage, QWheelEvent, QPainter, QPen, QBrush, QCursor
 from PyQt5.QtCore import Qt, QPoint, QRect, QSize
 from PyQt5 import QtWidgets, QtCore
@@ -39,6 +39,11 @@ class MyWidget(QWidget):
         self.lbl_pen_size.setAlignment(Qt.AlignCenter)
         self.lbl_pos = QLabel()
         self.lbl_pos.setAlignment(Qt.AlignCenter)
+
+        self.changeAxisBtn1 = QRadioButton('Axial', self)
+        self.changeAxisBtn2 = QRadioButton('Coronal', self)
+        self.changeAxisBtn3 = QRadioButton('Sagittal', self)
+        self.changeAxisBtn1.setChecked(True)   
         
         self.hViewbox = QHBoxLayout()
         self.hViewbox.addWidget(self.view_1)
@@ -58,11 +63,17 @@ class MyWidget(QWidget):
         self.hOptionbox.addWidget(self.previousBtn)
         self.hOptionbox.addWidget(self.nextBtn)
         self.hOptionbox.addWidget(self.dialogBtn)
+
+        self.hOptionbox_2 = QHBoxLayout()
+        self.hOptionbox_2.addWidget(self.changeAxisBtn1)
+        self.hOptionbox_2.addWidget(self.changeAxisBtn2)
+        self.hOptionbox_2.addWidget(self.changeAxisBtn3)
+        self.hOptionbox_2.addWidget(self.lbl_pos)
         
         self.vbox = QVBoxLayout()
         self.vbox.addLayout(self.hViewbox)
         self.vbox.addLayout(self.hOptionbox)
-        self.vbox.addWidget(self.lbl_pos)
+        self.vbox.addLayout(self.hOptionbox_2)
         
         self.setLayout(self.vbox)
 
@@ -104,6 +115,7 @@ class MyApp(QMainWindow):
         self.onShift = False
         self.pen_size = 10
         self.py_raw = voxel.PyVoxel()
+        self.cur_axis = 0
 
         self.wg = MyWidget() 
         self.setCentralWidget(self.wg)
@@ -154,6 +166,10 @@ class MyApp(QMainWindow):
         self.wg.previousBtn.clicked.connect(self.previousBtn_clicked)
         self.wg.nextBtn.clicked.connect(self.nextBtn_clicked)
 
+        self.wg.changeAxisBtn1.clicked.connect(self.changeAxis)
+        self.wg.changeAxisBtn2.clicked.connect(self.changeAxis)
+        self.wg.changeAxisBtn3.clicked.connect(self.changeAxis)
+
         self.wg.view_1.setMouseTracking(True)
         self.wg.view_2.setMouseTracking(True)
 
@@ -184,6 +200,8 @@ class MyApp(QMainWindow):
             self.mask_arrList = np.zeros((1, self.NofI, self.Nx, self.Ny))
             self.refresh()
             self.is_opened = True
+            if not self.wg.changeAxisBtn1.isChecked():
+                self.wg.changeAxisBtn1.toggle()
         except:
             print('openImageRaw Error')
 
@@ -200,12 +218,14 @@ class MyApp(QMainWindow):
 
             self.EntireImage = np.asarray(ImgArray, dtype=np.float32) 
             self.EntireImage = np.squeeze(self.EntireImage)
-            self.NofI = self.EntireImage.shape[0]  
-            self.Nx = self.EntireImage.shape[1] 
-            self.Ny = self.EntireImage.shape[2] 
+            self.NofI = self.EntireImage.shape[0]
+            self.Nx = self.EntireImage.shape[1]
+            self.Ny = self.EntireImage.shape[2]
             self.mask_arrList = np.zeros((1, self.NofI, self.Nx, self.Ny))
             self.refresh()
             self.is_opened = True
+            if not self.wg.changeAxisBtn1.isChecked():
+                self.wg.changeAxisBtn1.toggle()
         except:
             print('openImageIMA Error')
 
@@ -233,6 +253,7 @@ class MyApp(QMainWindow):
             for i in range(self.mask_arrList.shape[0]):
                 self.wg.maskComboBox.addItem('Mask' + str(i + 1))
             if cur_mask_index >= 0: self.wg.maskComboBox.setCurrentIndex(cur_mask_index)
+
 
             self.cur_orginal_image = self.EntireImage[self.cur_idx]
             self.cur_img_arr = self.AdjustPixelRange(self.cur_orginal_image, self.window_level, self.window_width)
@@ -387,10 +408,6 @@ class MyApp(QMainWindow):
             self.wg.view_2.scale(1.25, 1.25)
         if self.onCtrl and event.key() == Qt.Key_Minus:
             self.wg.view_2.scale(0.8, 0.8)
-        if self.onCtrl and event.key() == Qt.Key_Asterisk:
-            self.zoom = 1
-            self.refresh()
-            print('asterisk = ', self.zoom)
 
     def keyReleaseEvent(self, event):
         if event.key() == Qt.Key_Control:
@@ -520,6 +537,10 @@ class MyApp(QMainWindow):
 
     def saveMasksAsNpy(self):
         try:
+            if not self.wg.changeAxisBtn1.isChecked():
+                self.wg.changeAxisBtn1.toggle()
+                self.changeAxis()
+
             save_fname = QFileDialog.getSaveFileName(self, "Save Masks as npy", './untitled.npy')[0]
             if len(save_fname) < 1: 
                 return
@@ -537,6 +558,10 @@ class MyApp(QMainWindow):
 
     def saveMasksAsBin(self):
         try:
+            if not self.wg.changeAxisBtn1.isChecked():
+                self.wg.changeAxisBtn1.toggle()
+                self.changeAxis()
+
             save_fname = QFileDialog.getSaveFileName(self, "Save Masks as bin", './untitled.bin')[0]
             if len(save_fname) < 1: 
                 return
@@ -556,6 +581,10 @@ class MyApp(QMainWindow):
 
     def loadMasksNpy(self):
         try:
+            if not self.wg.changeAxisBtn1.isChecked():
+                self.wg.changeAxisBtn1.toggle()
+                self.changeAxis()
+
             load_fname = QFileDialog.getOpenFileName(self, 'Load Masks From Npy File')[0]
             self.mask_arrList = np.load(load_fname)
             self.mask_arrList = np.expand_dims(self.mask_arrList, axis=0)
@@ -565,6 +594,10 @@ class MyApp(QMainWindow):
 
     def loadBinMasks(self):
         try:
+            if not self.wg.changeAxisBtn1.isChecked():
+                self.wg.changeAxisBtn1.toggle()
+                self.changeAxis()
+
             fname = QFileDialog.getOpenFileName(self, 'Load Masks From Bin File')[0]
             # self.py_raw = voxel.PyVoxel()
             self.py_raw.ReadFromBin(fname)
@@ -572,11 +605,51 @@ class MyApp(QMainWindow):
             if self.NofI == self.py_raw.m_Voxel.shape[0]:
                 self.mask_arrList = self.py_raw.m_Voxel.copy()
                 self.mask_arrList = np.expand_dims(self.mask_arrList, axis=0)
+                self.changeAxis()
                 self.refresh()
             else:
                 print('loadBinMasks Error : Mask volume and Image volume are different.')
         except:
             print('loadBinMasks Error')
+
+    def changeAxis(self):
+        if self.is_opened:
+            self.cur_idx = 0
+            if self.wg.changeAxisBtn1.isChecked():
+                if self.cur_axis == 0:
+                    return
+                elif self.cur_axis == 1:
+                    self.EntireImage = np.transpose(self.EntireImage, (2, 0, 1))
+                    self.mask_arrList = np.transpose(self.mask_arrList, (0, 3, 1, 2))
+                elif self.cur_axis == 2:
+                    self.EntireImage = np.transpose(self.EntireImage, (1, 2, 0))
+                    self.mask_arrList = np.transpose(self.mask_arrList, (0, 2, 3, 1))
+                self.cur_axis = 0
+            elif self.wg.changeAxisBtn2.isChecked():
+                if self.cur_axis == 0:
+                    self.EntireImage = np.transpose(self.EntireImage, (1, 2, 0))
+                    self.mask_arrList = np.transpose(self.mask_arrList, (0, 2, 3, 1))
+                elif self.cur_axis == 1:
+                    return
+                elif self.cur_axis == 2:
+                    self.EntireImage = np.transpose(self.EntireImage, (2, 0, 1))
+                    self.mask_arrList = np.transpose(self.mask_arrList, (0, 3, 1, 2))
+                self.cur_axis = 1
+            elif self.wg.changeAxisBtn3.isChecked():
+                if self.cur_axis == 0:
+                    self.EntireImage = np.transpose(self.EntireImage, (2, 0, 1))
+                    self.mask_arrList = np.transpose(self.mask_arrList, (0, 3, 1, 2))
+                elif self.cur_axis == 1:
+                    self.EntireImage = np.transpose(self.EntireImage, (1, 2, 0))
+                    self.mask_arrList = np.transpose(self.mask_arrList, (0, 2, 3, 1))
+                elif self.cur_axis == 2:
+                    return
+                self.cur_axis = 2
+            
+            self.NofI = self.EntireImage.shape[0]
+            self.Nx = self.EntireImage.shape[1]
+            self.Ny = self.EntireImage.shape[2]
+            self.refresh()
         
         
 if __name__ == '__main__':
