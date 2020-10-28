@@ -10,3 +10,6 @@
 ### 4) Deep Learning(CNN or etc..)
 ### 5) Ejection Fraction Calcuation
 ### 5) Cardiac Functional
+
+9개 case merge, dice_coef y_true = y_true[:,:,:,1] 정답 1만 확인
+결과 62정도가 최선으로 나옴..
