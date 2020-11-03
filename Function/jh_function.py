@@ -19,7 +19,6 @@ from PyQt5.QtCore import Qt, QPoint, QRect, QSize
 from PyQt5 import QtWidgets, QtCore
 import natsort
 import numpy as np
-import cv2
 import SimpleITK as itk
 import qimage2ndarray
 import math
@@ -38,6 +37,7 @@ class MyWidget(QWidget):
         self.deleteCurMaskBtn = QPushButton('Delete Mask(Not exist)', self)
         self.addMaskBtn = QPushButton('&Add Mask', self)
         self.maskComboBox = QComboBox(self)
+        self.showAllMaskCheckBox = QCheckBox('Show all masks', self)
         self.maskCheckBox = QCheckBox('Masking', self)
         self.blendCheckBox = QCheckBox('&Blended Mask on', self)
         self.blendCheckBox.setShortcut('X')
@@ -100,6 +100,7 @@ class MyWidget(QWidget):
         self.hOptionbox_2.addWidget(self.gAxisbox)
         self.hOptionbox_2.addWidget(self.lbl_pen_size)
         self.hOptionbox_2.addWidget(self.penSizeEdit)
+        self.hOptionbox_2.addWidget(self.showAllMaskCheckBox)
         self.hOptionbox_2.addWidget(self.maskCheckBox)
         self.hOptionbox_2.addWidget(self.blendCheckBox)
         self.hOptionbox_2.addWidget(self.transparentSlider)
@@ -123,6 +124,8 @@ class MyWidget(QWidget):
 class MyApp(QMainWindow):
     def __init__(self):
         super().__init__()
+        # self.window_level = 40
+        # self.window_width = 400
         self.window_level = 220
         self.window_width = 740
         self.deltaWL = 0
@@ -195,6 +198,7 @@ class MyApp(QMainWindow):
         self.wg.maskCheckBox.stateChanged.connect(self.onMasking)
         self.wg.maskComboBox.activated.connect(self.maskComboBoxActivated)
         self.wg.blendCheckBox.stateChanged.connect(self.onBlendedMask)
+        self.wg.showAllMaskCheckBox.stateChanged.connect(self.showAllMasks)
 
         self.wg.transparentSlider.setRange(1, 10)
         self.wg.transparentSlider.setSingleStep(1)
@@ -207,7 +211,6 @@ class MyApp(QMainWindow):
         self.wg.dialogBtn.clicked.connect(self.showDialog)
         self.wg.previousBtn.clicked.connect(self.previousBtn_clicked)
         self.wg.nextBtn.clicked.connect(self.nextBtn_clicked)
-        self.wg.morphBtn.clicked.connect(self.morphBtn_clicked)
 
         self.wg.changeAxisBtn1.clicked.connect(self.changeAxis)
         self.wg.changeAxisBtn2.clicked.connect(self.changeAxis)
@@ -301,7 +304,6 @@ class MyApp(QMainWindow):
                 self.wg.maskComboBox.addItem('Mask' + str(i + 1))
             if cur_mask_index >= 0: self.wg.maskComboBox.setCurrentIndex(cur_mask_index)
 
-
             self.cur_orginal_image = self.EntireImage[self.cur_idx]
             self.cur_img_arr = self.AdjustPixelRange(self.cur_orginal_image, self.window_level, self.window_width)
             self.cur_image = qimage2ndarray.array2qimage(self.cur_img_arr)
@@ -322,6 +324,7 @@ class MyApp(QMainWindow):
             self.wg.deleteCurMaskBtn.setText('Delete Mask {}'.format(self.wg.maskComboBox.currentIndex()+1))
             if self.wg.maskCheckBox.isChecked(): self.wg.maskCheckBox.toggle()
             if self.wg.blendCheckBox.isChecked(): self.wg.blendCheckBox.toggle()
+            if self.wg.showAllMaskCheckBox.isChecked(): self.wg.showAllMaskCheckBox.toggle()
         except:
             print('refresh Error')
         
@@ -508,11 +511,13 @@ class MyApp(QMainWindow):
 
     def addMask(self):
         try:
-            self.mask_arrList = np.concatenate((self.mask_arrList, np.zeros((1, self.NofI, self.Nx, self.Ny))), axis=0)
-            print(self.mask_arrList.shape)
-            self.wg.maskComboBox.addItem('Mask' + str(self.mask_arrList.shape[0]))
-            self.maskComboBoxActivated(self.mask_arrList.shape[0]-1)
-            self.wg.maskComboBox.setCurrentIndex(self.mask_arrList.shape[0]-1)
+            if self.mask_arrList.shape[0] < 3:
+                self.mask_arrList = np.concatenate((self.mask_arrList, np.zeros((1, self.NofI, self.Nx, self.Ny))), axis=0)
+                self.wg.maskComboBox.addItem('Mask' + str(self.mask_arrList.shape[0]))
+                self.maskComboBoxActivated(self.mask_arrList.shape[0]-1)
+                self.wg.maskComboBox.setCurrentIndex(self.mask_arrList.shape[0]-1)
+            else:
+                QMessageBox.warning(self, "Warining" ,"Maximum mask count is 3")
         except:
             print('addMask Error')
 
@@ -551,14 +556,16 @@ class MyApp(QMainWindow):
 
     def image2label(self, image):
         alpha_arr = qimage2ndarray.alpha_view(image)
-        return np.where(alpha_arr > 0, self.wg.maskComboBox.currentIndex() + 1, 0)
+        return np.where(alpha_arr > 0, 1, 0)
 
     def label2image(self, label):
         x, y = label.shape[0], label.shape[1]
+        color = [0, 0, 0, 255]
+        color[self.wg.maskComboBox.currentIndex()] = 255
 
-        r_img_arr = np.array([[[255, 0, 0, 255]] * y] * x)
+        img_arr = np.array([[color] * y] * x)
         new_label = label.copy().reshape(x, y, 1)
-        return qimage2ndarray.array2qimage(np.multiply(r_img_arr, new_label))
+        return qimage2ndarray.array2qimage(np.multiply(img_arr, new_label))
 
     def refreshMaskView(self):
         self.wg.scene_2.clear()
@@ -591,7 +598,7 @@ class MyApp(QMainWindow):
                 save_fname = save_fname + '.npy'
 
             for i in range(self.mask_arrList.shape[0]):
-                print(save_fname[:-4] + '_{}'.format(i+1) + save_fname[-4:])
+                # print(save_fname[:-4] + '_{}'.format(i+1) + save_fname[-4:])
                 np.save(save_fname[:-4] + '_{}'.format(i+1) + save_fname[-4:], self.mask_arrList[i])
 
             QMessageBox.information(self, 'Save All Masks', "All masks is saved.", \
@@ -632,14 +639,16 @@ class MyApp(QMainWindow):
                 self.changeAxis()
 
             mask_path = QFileDialog.getOpenFileName(self, 'Load Masks From Npy File', './')[0]
-            self.mask_fname = mask_path.split('/')[-1]
-            self.wg.lbl_mask_fname.setText('Mask file name : ' + self.mask_fname)
-            self.mask_arrList = np.load(mask_path)
-            self.mask_arrList = np.expand_dims(self.mask_arrList, axis=0)
-            self.refresh()
-
-            QMessageBox.information(self, 'Load All Masks', "All masks is loaded.", \
+            mask_arr = np.load(mask_path)
+            if self.NofI == mask_arr.shape[0]:
+                self.mask_arrList[self.wg.maskComboBox.currentIndex()] = mask_arr.copy()
+                self.mask_fname = mask_path.split('/')[-1]
+                self.wg.lbl_mask_fname.setText('Mask file name : ' + self.mask_fname)
+                self.refresh()
+                QMessageBox.information(self, 'Load All Masks', "All masks is loaded.", \
                     QMessageBox.Ok, QMessageBox.Ok)
+            else:
+                print('loadNpyMasks Error : Mask volume and Image volume are different.')
         except:
             print('loadMasksNpy Error')
 
@@ -653,13 +662,12 @@ class MyApp(QMainWindow):
                 self.changeAxis()
 
             mask_path = QFileDialog.getOpenFileName(self, 'Load Masks From Bin File', './')[0]
-            self.mask_fname = mask_path.split('/')[-1]
-            self.wg.lbl_mask_fname.setText('Mask file name : ' + self.mask_fname)
             self.py_raw.ReadFromBin(mask_path)
 
             if self.NofI == self.py_raw.m_Voxel.shape[0]:
-                self.mask_arrList = self.py_raw.m_Voxel.copy()
-                self.mask_arrList = np.expand_dims(self.mask_arrList, axis=0)
+                self.mask_arrList[self.wg.maskComboBox.currentIndex()] = self.py_raw.m_Voxel.copy()
+                self.mask_fname = mask_path.split('/')[-1]
+                self.wg.lbl_mask_fname.setText('Mask file name : ' + self.mask_fname)
                 self.refresh()
                 QMessageBox.information(self, 'Load All Masks', "All masks is loaded.", \
                     QMessageBox.Ok, QMessageBox.Ok)
@@ -707,6 +715,26 @@ class MyApp(QMainWindow):
             self.Ny = self.EntireImage.shape[2]
             self.refresh()
 
+    def showAllMasks(self, state):
+        if state == Qt.Checked:
+            r_img_arr = np.array([[[255, 0, 0, math.floor(255*self.transparent)]] * self.Ny] * self.Nx)
+            g_img_arr = np.array([[[0, 255, 0, math.floor(255*self.transparent)]] * self.Ny] * self.Nx)
+            b_img_arr = np.array([[[0, 0, 255, math.floor(255*self.transparent)]] * self.Ny] * self.Nx)
+
+            sum_mask = np.zeros((self.Nx, self.Ny))
+            for i in range(self.mask_arrList.shape[0]):
+                sum_mask =  sum_mask + self.mask_arrList[i, self.cur_idx]
+
+            r_label = np.where(sum_mask == 1, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
+            g_label = np.where(sum_mask == 2, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
+            b_label = np.where(sum_mask == 3, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
+
+            new_img = np.multiply(r_img_arr, r_label) + np.multiply(g_img_arr, g_label) + np.multiply(b_img_arr, b_label)
+            self.wg.scene_1.addPixmap(QPixmap.fromImage(QImage(qimage2ndarray.array2qimage(new_img))))
+        else:
+            self.wg.scene_1.removeItem(self.wg.scene_1.items()[0])
+            self.wg.scene_1.addPixmap(self.cur_maskPixmap)
+    
     def morphBtn_clicked(self):
         # img = cv2.imread()
         # python listtomat
@@ -733,13 +761,7 @@ class MyApp(QMainWindow):
         processed = np.reshape(processed, (1, processed.shape[0], processed.shape[1], processed.shape[2]))
         self.mask_arrList = processed
         print(processed.shape)
-
-
         self.refresh()
-
-
-
-        
         
 if __name__ == '__main__':
     app = QApplication(sys.argv)
