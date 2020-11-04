@@ -13,6 +13,7 @@ import qimage2ndarray
 import math
 import copy
 import voxel
+import cv2
 
 class MyWidget(QWidget): 
     def __init__(self): 
@@ -38,6 +39,7 @@ class MyWidget(QWidget):
         self.dialogBtn = QPushButton('&ImgNum', self)  
         self.previousBtn = QPushButton('&previous', self)
         self.nextBtn = QPushButton('&next', self)
+        self.morphBtn = QPushButton('&morph', self)
 
         self.lbl_pen_size = QLabel('Pen & Eraser size', self)
         self.lbl_pen_size.setAlignment(Qt.AlignCenter)
@@ -73,6 +75,7 @@ class MyWidget(QWidget):
         self.hOptionbox_1.addWidget(self.addMaskBtn)
         self.hOptionbox_1.addWidget(self.maskComboBox)
         self.hOptionbox_1.addWidget(self.lbl_pos)
+        self.hOptionbox_1.addWidget(self.morphBtn)
         self.hOptionbox_1.addWidget(self.previousBtn)
         self.hOptionbox_1.addWidget(self.nextBtn)
         self.hOptionbox_1.addWidget(self.dialogBtn)
@@ -186,7 +189,7 @@ class MyApp(QMainWindow):
         self.wg.maskComboBox.activated.connect(self.maskComboBoxActivated)
         self.wg.blendCheckBox.stateChanged.connect(self.onBlendedMask)
         self.wg.showAllMaskCheckBox.stateChanged.connect(self.showAllMasks)
-
+        self.wg.morphBtn.clicked.connect(self.morphBtn_clicked)
         self.wg.transparentSlider.setRange(1, 10)
         self.wg.transparentSlider.setSingleStep(1)
         self.wg.transparentSlider.setValue(self.transparent*10)
@@ -628,7 +631,8 @@ class MyApp(QMainWindow):
             mask_path = QFileDialog.getOpenFileName(self, 'Load Masks From Npy File', './')[0]
             mask_arr = np.load(mask_path)
             if self.NofI == mask_arr.shape[0]:
-                self.mask_arrList[self.wg.maskComboBox.currentIndex()] = mask_arr.copy()
+                self.mask_arrList[self.wg.maskComboBox.currentIndex()] = \
+                    np.where(mask_arr.copy() > 0, 1, 0)
                 self.mask_fname = mask_path.split('/')[-1]
                 self.wg.lbl_mask_fname.setText('Mask file name : ' + self.mask_fname)
                 self.refresh()
@@ -652,7 +656,8 @@ class MyApp(QMainWindow):
             self.py_raw.ReadFromBin(mask_path)
 
             if self.NofI == self.py_raw.m_Voxel.shape[0]:
-                self.mask_arrList[self.wg.maskComboBox.currentIndex()] = self.py_raw.m_Voxel.copy()
+                self.mask_arrList[self.wg.maskComboBox.currentIndex()] = \
+                    np.where(self.py_raw.m_Voxel.copy() > 0, 1, 0)
                 self.mask_fname = mask_path.split('/')[-1]
                 self.wg.lbl_mask_fname.setText('Mask file name : ' + self.mask_fname)
                 self.refresh()
@@ -717,10 +722,32 @@ class MyApp(QMainWindow):
             b_label = np.where(sum_mask == 3, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
 
             new_img = np.multiply(r_img_arr, r_label) + np.multiply(g_img_arr, g_label) + np.multiply(b_img_arr, b_label)
+            self.wg.scene_1.removeItem(self.wg.scene_1.items()[0])
             self.wg.scene_1.addPixmap(QPixmap.fromImage(QImage(qimage2ndarray.array2qimage(new_img))))
         else:
             self.wg.scene_1.removeItem(self.wg.scene_1.items()[0])
             self.wg.scene_1.addPixmap(self.cur_maskPixmap)
+
+    def morphBtn_clicked(self):
+        img = np.array(self.mask_arrList)
+        kernel = np.ones((3,3), np.uint8)
+        # frameN = img.shape[3] #nX
+
+        processed = []
+        for i in range(self.NofI):
+            msk = img[self.wg.maskComboBox.currentIndex(), i, :, :]
+            dilation = cv2.dilate(msk, kernel, iterations=1)
+            erosion = cv2.erode(dilation, kernel, iterations=1)
+
+            processed.append(erosion)
+        # self.mask_arrList = processed
+
+        processed = np.array(processed)
+        # processed = np.transpose(processed, (1, 2, 0))
+        # processed = np.reshape(processed, (1, processed.shape[0], processed.shape[1], processed.shape[2]))
+        self.mask_arrList[self.wg.maskComboBox.currentIndex()] = processed
+        # print(processed.shape)
+        self.refresh()
         
 if __name__ == '__main__':
     app = QApplication(sys.argv)
