@@ -15,6 +15,11 @@ import copy
 import voxel
 import cv2
 
+# import import_ipynb
+import ym_model_1
+import tensorflow as tf
+from tensorflow import keras
+
 class MyWidget(QWidget): 
     def __init__(self): 
         super().__init__() 
@@ -40,6 +45,7 @@ class MyWidget(QWidget):
         self.previousBtn = QPushButton('&previous', self)
         self.nextBtn = QPushButton('&next', self)
         self.morphBtn = QPushButton('&morph', self)
+        self.predictionBtn = QPushButton('&Prediction', self)
 
         self.lbl_pen_size = QLabel('Pen & Eraser size', self)
         self.lbl_pen_size.setAlignment(Qt.AlignCenter)
@@ -76,6 +82,7 @@ class MyWidget(QWidget):
         self.hOptionbox_1.addWidget(self.maskComboBox)
         self.hOptionbox_1.addWidget(self.lbl_pos)
         self.hOptionbox_1.addWidget(self.morphBtn)
+        self.hOptionbox_1.addWidget(self.predictionBtn)
         self.hOptionbox_1.addWidget(self.previousBtn)
         self.hOptionbox_1.addWidget(self.nextBtn)
         self.hOptionbox_1.addWidget(self.dialogBtn)
@@ -109,7 +116,17 @@ class MyWidget(QWidget):
             event.size().height()/event.oldSize().height())
         self.view_2.scale(event.size().width()/event.oldSize().width(), \
             event.size().height()/event.oldSize().height())
-    
+
+class PredictionWindow(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.scene_pred = QGraphicsScene()
+        self.view_pred = QGraphicsView(self.scene_pred)
+        self.layout = QVBoxLayout()
+        self.layout.addWidget(self.view_pred)
+        self.setLayout(self.layout)
+        self.setWindowTitle('Prediction Image')
+
 
 class MyApp(QMainWindow):
     def __init__(self):
@@ -145,7 +162,8 @@ class MyApp(QMainWindow):
         self.mask_fname = ''
         self.transparent = 0.5
 
-        self.wg = MyWidget() 
+        self.wg = MyWidget()
+        self.pred_win = PredictionWindow()
         self.setCentralWidget(self.wg)
         self.initUI()
         
@@ -190,6 +208,7 @@ class MyApp(QMainWindow):
         self.wg.blendCheckBox.stateChanged.connect(self.onBlendedMask)
         self.wg.showAllMaskCheckBox.stateChanged.connect(self.showAllMasks)
         self.wg.morphBtn.clicked.connect(self.morphBtn_clicked)
+        self.wg.predictionBtn.clicked.connect(self.predict_currentImg)
         self.wg.transparentSlider.setRange(1, 10)
         self.wg.transparentSlider.setSingleStep(1)
         self.wg.transparentSlider.setValue(self.transparent*10)
@@ -729,25 +748,47 @@ class MyApp(QMainWindow):
             self.wg.scene_1.addPixmap(self.cur_maskPixmap)
 
     def morphBtn_clicked(self):
-        img = np.array(self.mask_arrList)
-        kernel = np.ones((3,3), np.uint8)
-        # frameN = img.shape[3] #nX
+        if self.is_opened:
+            img = np.array(self.mask_arrList)
+            kernel = np.ones((3,3), np.uint8)
 
-        processed = []
-        for i in range(self.NofI):
-            msk = img[self.wg.maskComboBox.currentIndex(), i, :, :]
-            dilation = cv2.dilate(msk, kernel, iterations=1)
-            erosion = cv2.erode(dilation, kernel, iterations=1)
+            processed = []
+            for i in range(self.NofI):
+                msk = img[self.wg.maskComboBox.currentIndex(), i, :, :]
+                dilation = cv2.dilate(msk, kernel, iterations=1)
+                erosion = cv2.erode(dilation, kernel, iterations=1)
 
-            processed.append(erosion)
-        # self.mask_arrList = processed
+                processed.append(erosion)
 
-        processed = np.array(processed)
-        # processed = np.transpose(processed, (1, 2, 0))
-        # processed = np.reshape(processed, (1, processed.shape[0], processed.shape[1], processed.shape[2]))
-        self.mask_arrList[self.wg.maskComboBox.currentIndex()] = processed
-        # print(processed.shape)
-        self.refresh()
+            processed = np.array(processed)
+            self.mask_arrList[self.wg.maskComboBox.currentIndex()] = processed
+            self.refresh()
+
+    def predict_currentImg(self):
+        if self.is_opened:
+            model = ym_model_1.build_unet()
+            model.load_weights('model/13_0.0079.h5')
+            img = self.EntireImage[self.cur_idx]
+            img = img.reshape(1, img.shape[0], img.shape[1], 1)
+
+            prediction = model.predict(img)
+            prediction = np.squeeze(np.argmax(prediction, axis=-1))
+
+            r_img_arr = np.array([[[255, 0, 0, math.floor(255*self.transparent)]] * self.Ny] * self.Nx)
+            g_img_arr = np.array([[[0, 255, 0, math.floor(255*self.transparent)]] * self.Ny] * self.Nx)
+            b_img_arr = np.array([[[0, 0, 255, math.floor(255*self.transparent)]] * self.Ny] * self.Nx)
+
+            r_label = np.where(prediction == 1, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
+            g_label = np.where(prediction == 2, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
+            b_label = np.where(prediction == 3, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
+
+            new_img = np.multiply(r_img_arr, r_label) + np.multiply(g_img_arr, g_label) + np.multiply(b_img_arr, b_label)
+            self.pred_win.scene_pred.clear()
+            self.pred_win.scene_pred.addPixmap(QPixmap.fromImage(QImage(self.cur_image)))
+            self.pred_win.scene_pred.addPixmap(QPixmap.fromImage(QImage(qimage2ndarray.array2qimage(new_img))))
+            self.pred_win.show()
+
+        
         
 if __name__ == '__main__':
     app = QApplication(sys.argv)
