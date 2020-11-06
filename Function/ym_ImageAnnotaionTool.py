@@ -45,7 +45,7 @@ class MyWidget(QWidget):
         self.previousBtn = QPushButton('&previous', self)
         self.nextBtn = QPushButton('&next', self)
         self.morphBtn = QPushButton('&morph', self)
-        self.predictionBtn = QPushButton('&Prediction', self)
+        self.predictionCheckBox = QCheckBox('&Prediction', self)
 
         self.lbl_pen_size = QLabel('Pen & Eraser size', self)
         self.lbl_pen_size.setAlignment(Qt.AlignCenter)
@@ -82,7 +82,6 @@ class MyWidget(QWidget):
         self.hOptionbox_1.addWidget(self.maskComboBox)
         self.hOptionbox_1.addWidget(self.lbl_pos)
         self.hOptionbox_1.addWidget(self.morphBtn)
-        self.hOptionbox_1.addWidget(self.predictionBtn)
         self.hOptionbox_1.addWidget(self.previousBtn)
         self.hOptionbox_1.addWidget(self.nextBtn)
         self.hOptionbox_1.addWidget(self.dialogBtn)
@@ -97,6 +96,7 @@ class MyWidget(QWidget):
         self.hOptionbox_2.addWidget(self.gAxisbox)
         self.hOptionbox_2.addWidget(self.lbl_pen_size)
         self.hOptionbox_2.addWidget(self.penSizeEdit)
+        self.hOptionbox_2.addWidget(self.predictionCheckBox)
         self.hOptionbox_2.addWidget(self.showAllMaskCheckBox)
         self.hOptionbox_2.addWidget(self.maskCheckBox)
         self.hOptionbox_2.addWidget(self.blendCheckBox)
@@ -120,6 +120,14 @@ class MyWidget(QWidget):
 class PredictionWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self.initUI()
+
+        self.cur_idx = 0
+        self.cur_image = None
+        self.pred_volume = None
+        self.transparent = 0
+    
+    def initUI(self):
         self.scene_pred = QGraphicsScene()
         self.view_pred = QGraphicsView(self.scene_pred)
         self.layout = QVBoxLayout()
@@ -127,6 +135,20 @@ class PredictionWindow(QWidget):
         self.setLayout(self.layout)
         self.setWindowTitle('Prediction Image')
 
+    def refresh(self):
+        x, y = self.pred_volume.shape[1], self.pred_volume.shape[2]
+        r_img_arr = np.array([[[255, 0, 0, math.floor(255*self.transparent)]] * y] * x)
+        g_img_arr = np.array([[[0, 255, 0, math.floor(255*self.transparent)]] * y] * x)
+        b_img_arr = np.array([[[0, 0, 255, math.floor(255*self.transparent)]] * y] * x)
+
+        r_label = np.where(self.pred_volume[self.cur_idx] == 1, 1, 0).copy().reshape(x, y, 1)
+        g_label = np.where(self.pred_volume[self.cur_idx] == 2, 1, 0).copy().reshape(x, y, 1)
+        b_label = np.where(self.pred_volume[self.cur_idx] == 3, 1, 0).copy().reshape(x, y, 1)
+
+        new_img = np.multiply(r_img_arr, r_label) + np.multiply(g_img_arr, g_label) + np.multiply(b_img_arr, b_label)
+        self.scene_pred.clear()
+        self.scene_pred.addPixmap(QPixmap.fromImage(QImage(self.cur_image)))
+        self.scene_pred.addPixmap(QPixmap.fromImage(QImage(qimage2ndarray.array2qimage(new_img))))
 
 class MyApp(QMainWindow):
     def __init__(self):
@@ -148,6 +170,7 @@ class MyApp(QMainWindow):
         self.adjustedImage = []
         
         self.is_opened = False
+        self.is_predicted = False
         self.Lclicked = False
         self.Rclicked = False
         self.lastPoint = QPoint()
@@ -161,6 +184,7 @@ class MyApp(QMainWindow):
         self.image_fname = ''
         self.mask_fname = ''
         self.transparent = 0.5
+        self.color_list = [Qt.red, Qt.green, Qt.blue]
 
         self.wg = MyWidget()
         self.pred_win = PredictionWindow()
@@ -205,10 +229,12 @@ class MyApp(QMainWindow):
 
         self.wg.maskCheckBox.stateChanged.connect(self.onMasking)
         self.wg.maskComboBox.activated.connect(self.maskComboBoxActivated)
+        self.wg.maskComboBox.setMaxCount(len(self.color_list))
         self.wg.blendCheckBox.stateChanged.connect(self.onBlendedMask)
         self.wg.showAllMaskCheckBox.stateChanged.connect(self.showAllMasks)
         self.wg.morphBtn.clicked.connect(self.morphBtn_clicked)
-        self.wg.predictionBtn.clicked.connect(self.predict_currentImg)
+        self.wg.predictionCheckBox.stateChanged.connect(self.predict_currentImg)
+
         self.wg.transparentSlider.setRange(1, 10)
         self.wg.transparentSlider.setSingleStep(1)
         self.wg.transparentSlider.setValue(self.transparent*10)
@@ -256,6 +282,7 @@ class MyApp(QMainWindow):
             self.mask_arrList = np.zeros((1, self.NofI, self.Nx, self.Ny))
             self.refresh()
             self.is_opened = True
+            self.is_predicted = False
             self.wg.gAxisbox.setEnabled(True)
             if not self.wg.changeAxisBtn1.isChecked():
                 self.wg.changeAxisBtn1.toggle()
@@ -283,6 +310,7 @@ class MyApp(QMainWindow):
             self.mask_arrList = np.zeros((1, self.NofI, self.Nx, self.Ny))
             self.refresh()
             self.is_opened = True
+            self.is_predicted = False
             self.wg.gAxisbox.setEnabled(True)
             if not self.wg.changeAxisBtn1.isChecked():
                 self.wg.changeAxisBtn1.toggle()
@@ -333,7 +361,10 @@ class MyApp(QMainWindow):
             self.wg.deleteCurMaskBtn.setText('Delete Mask {}'.format(self.wg.maskComboBox.currentIndex()+1))
             if self.wg.maskCheckBox.isChecked(): self.wg.maskCheckBox.toggle()
             if self.wg.blendCheckBox.isChecked(): self.wg.blendCheckBox.toggle()
-            if self.wg.showAllMaskCheckBox.isChecked(): self.wg.showAllMaskCheckBox.toggle()
+            if self.wg.showAllMaskCheckBox.isChecked(): self.showAllMasks(Qt.Checked)
+            if self.wg.predictionCheckBox.isChecked():
+                if self.pred_win.isVisible(): self.predict_currentImg(Qt.Checked)
+                else: self.wg.predictionCheckBox.toggle()
         except:
             print('refresh Error')
         
@@ -408,7 +439,7 @@ class MyApp(QMainWindow):
 
                 if self.Lclicked:
                     painter = QPainter(self.cur_maskPixmap)
-                    painter.setPen(QPen(Qt.red, self.pen_size, Qt.SolidLine))
+                    painter.setPen(QPen(self.color_list[self.wg.maskComboBox.currentIndex()], self.pen_size, Qt.SolidLine))
                     if self.onCtrl:
                         painter.drawLine(self.lastPoint, event.scenePos().toPoint())
                     elif self.onShift:
@@ -520,7 +551,7 @@ class MyApp(QMainWindow):
 
     def addMask(self):
         try:
-            if self.mask_arrList.shape[0] < 3:
+            if self.mask_arrList.shape[0] < len(self.color_list):
                 self.mask_arrList = np.concatenate((self.mask_arrList, np.zeros((1, self.NofI, self.Nx, self.Ny))), axis=0)
                 self.wg.maskComboBox.addItem('Mask' + str(self.mask_arrList.shape[0]))
                 self.maskComboBoxActivated(self.mask_arrList.shape[0]-1)
@@ -741,12 +772,10 @@ class MyApp(QMainWindow):
             b_label = np.where(sum_mask == 3, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
 
             new_img = np.multiply(r_img_arr, r_label) + np.multiply(g_img_arr, g_label) + np.multiply(b_img_arr, b_label)
-            self.wg.scene_1.removeItem(self.wg.scene_1.items()[0])
             self.wg.scene_1.addPixmap(QPixmap.fromImage(QImage(qimage2ndarray.array2qimage(new_img))))
         else:
             self.wg.scene_1.removeItem(self.wg.scene_1.items()[0])
-            self.wg.scene_1.addPixmap(self.cur_maskPixmap)
-
+            
     def morphBtn_clicked(self):
         if self.is_opened:
             img = np.array(self.mask_arrList)
@@ -764,30 +793,27 @@ class MyApp(QMainWindow):
             self.mask_arrList[self.wg.maskComboBox.currentIndex()] = processed
             self.refresh()
 
-    def predict_currentImg(self):
+    def predict_currentImg(self, state):
         if self.is_opened:
-            model = ym_model_1.build_unet()
-            model.load_weights('model/13_0.0079.h5')
-            img = self.EntireImage[self.cur_idx]
-            img = img.reshape(1, img.shape[0], img.shape[1], 1)
+            if state == Qt.Checked:
+                if not self.is_predicted:
+                    img = self.EntireImage.copy()
+                    img = img.reshape(-1, img.shape[1], img.shape[2], 1)
 
-            prediction = model.predict(img)
-            prediction = np.squeeze(np.argmax(prediction, axis=-1))
+                    model = ym_model_1.build_unet()
+                    model.load_weights('model/13_0.0079.h5')
 
-            r_img_arr = np.array([[[255, 0, 0, math.floor(255*self.transparent)]] * self.Ny] * self.Nx)
-            g_img_arr = np.array([[[0, 255, 0, math.floor(255*self.transparent)]] * self.Ny] * self.Nx)
-            b_img_arr = np.array([[[0, 0, 255, math.floor(255*self.transparent)]] * self.Ny] * self.Nx)
-
-            r_label = np.where(prediction == 1, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
-            g_label = np.where(prediction == 2, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
-            b_label = np.where(prediction == 3, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
-
-            new_img = np.multiply(r_img_arr, r_label) + np.multiply(g_img_arr, g_label) + np.multiply(b_img_arr, b_label)
-            self.pred_win.scene_pred.clear()
-            self.pred_win.scene_pred.addPixmap(QPixmap.fromImage(QImage(self.cur_image)))
-            self.pred_win.scene_pred.addPixmap(QPixmap.fromImage(QImage(qimage2ndarray.array2qimage(new_img))))
-            self.pred_win.show()
-
+                    prediction = model.predict(img)
+                    prediction = np.squeeze(np.argmax(prediction, axis=-1))
+                    self.pred_win.pred_volume = prediction
+                    self.is_predicted = True
+                self.pred_win.cur_idx = self.cur_idx
+                self.pred_win.cur_image = self.cur_image
+                self.pred_win.transparent = self.transparent
+                self.pred_win.refresh()
+                if not self.pred_win.isVisible(): self.pred_win.show()
+            else:
+                self.pred_win.close()
         
         
 if __name__ == '__main__':
