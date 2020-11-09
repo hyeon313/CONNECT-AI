@@ -16,7 +16,7 @@ import voxel
 import cv2
 
 # import import_ipynb
-import ym_model_1
+import ym_model_1 as M
 import tensorflow as tf
 from tensorflow import keras
 
@@ -126,12 +126,15 @@ class PredictionWindow(QWidget):
         self.cur_image = None
         self.pred_volume = None
         self.transparent = 0
+        self.mask = None
     
     def initUI(self):
         self.scene_pred = QGraphicsScene()
         self.view_pred = QGraphicsView(self.scene_pred)
+        self.lbl_dsc = QLabel('Check "Show All Masks" to show DSC', self)
         self.layout = QVBoxLayout()
         self.layout.addWidget(self.view_pred)
+        self.layout.addWidget(self.lbl_dsc)
         self.setLayout(self.layout)
         self.setWindowTitle('Prediction Image')
 
@@ -149,6 +152,23 @@ class PredictionWindow(QWidget):
         self.scene_pred.clear()
         self.scene_pred.addPixmap(QPixmap.fromImage(QImage(self.cur_image)))
         self.scene_pred.addPixmap(QPixmap.fromImage(QImage(qimage2ndarray.array2qimage(new_img))))
+    
+    def setDSC(self):
+        # print(self.mask.shape, self.pred_volume[self.cur_idx].shape)
+        dice_1 = self.dice_coef(self.mask, self.pred_volume[self.cur_idx], 1)
+        dice_2 = self.dice_coef(self.mask, self.pred_volume[self.cur_idx], 2)
+        dice_avg = (dice_1 + dice_2) / 2
+
+        self.lbl_dsc.setText('[DSC]   Label_1 : {:.4f}   Label_2 : {:.4f}   Avg : {:.4f}'.format(dice_1, dice_2, dice_avg))
+
+    def dice_coef(self, y_true, y_pred, label, smooth=1):
+        y_true = np.where(y_true == label, 1, 0)
+        y_pred = np.where(y_pred == label, 1, 0)
+
+        intersection = np.sum(np.multiply(y_true ,y_pred))
+        return (2. * intersection + smooth) / (np.sum(y_true) + np.sum(y_pred) + smooth)
+        
+
 
 class MyApp(QMainWindow):
     def __init__(self):
@@ -363,7 +383,10 @@ class MyApp(QMainWindow):
             if self.wg.blendCheckBox.isChecked(): self.wg.blendCheckBox.toggle()
             if self.wg.showAllMaskCheckBox.isChecked(): self.showAllMasks(Qt.Checked)
             if self.wg.predictionCheckBox.isChecked():
-                if self.pred_win.isVisible(): self.predict_currentImg(Qt.Checked)
+                if self.pred_win.isVisible(): 
+                    self.predict_currentImg(Qt.Checked)
+                    if self.wg.showAllMaskCheckBox.isChecked():
+                        self.pred_win.setDSC()
                 else: self.wg.predictionCheckBox.toggle()
         except:
             print('refresh Error')
@@ -766,6 +789,7 @@ class MyApp(QMainWindow):
             sum_mask = np.zeros((self.Nx, self.Ny))
             for i in range(self.mask_arrList.shape[0]):
                 sum_mask =  sum_mask + self.mask_arrList[i, self.cur_idx]
+            self.pred_win.mask = sum_mask
 
             r_label = np.where(sum_mask == 1, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
             g_label = np.where(sum_mask == 2, 1, 0).copy().reshape(self.Nx, self.Ny, 1)
@@ -800,7 +824,7 @@ class MyApp(QMainWindow):
                     img = self.EntireImage.copy()
                     img = img.reshape(-1, img.shape[1], img.shape[2], 1)
 
-                    model = ym_model_1.build_unet()
+                    model = M.build_unet()
                     model.load_weights('model/13_0.0079.h5')
 
                     prediction = model.predict(img)
